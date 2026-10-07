@@ -1,4 +1,4 @@
-# invent-agentic-kit
+# agentic-kit
 
 A Claude Code plugin that gives Invent projects a shared way of building with
 Claude: one guided setup, safety hooks and secret-file rules that apply
@@ -25,7 +25,9 @@ a file silently, except in step 7:
    below).
 3. **Project CLAUDE.md** — adds the Invent project guidelines: the ticket
    workflow below and a summary of the hooks in use, worded for the repo
-   type. Updates an older version of the block if it finds one. In a repo
+   type. Updates an older version of the block if it finds one (the block has
+   its own version, v0.6, which changes only when its text does, so a kit
+   update alone never asks you to replace it). In a repo
    without a `CLAUDE.md` it starts Claude Code's built-in `/init` first; next
    to an `AGENTS.md` it imports it with `@AGENTS.md` instead (Claude Code
    stops reading `AGENTS.md` once a `CLAUDE.md` exists).
@@ -292,12 +294,15 @@ local copy or from the git repo:
 
 ```
 /plugin marketplace add <path to this folder or git URL>
-/plugin install invent-agentic-kit@invent-agentic-kit
+/plugin install agentic-kit@agentic-kit
 ```
 
 Restart Claude Code, open your project, and run `/agentic-kit-setup`.
 
-To update: `/plugin marketplace update invent-agentic-kit`, then restart.
+Install either this kit or `invent-agentic-kit`, not both: they ship the same
+hooks, which would then run twice on every tool call.
+
+To update: `/plugin marketplace update agentic-kit`, then restart.
 To see or disable the hooks: `/hooks`, or turn the plugin off in `/plugin`.
 
 ### Requirements

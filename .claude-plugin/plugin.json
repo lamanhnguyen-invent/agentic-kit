@@ -1,5 +1,5 @@
 {
-  "name": "invent-agentic-kit",
+  "name": "agentic-kit",
   "description": "Skills, hooks and a review agent for building with Claude Code at Invent.",
   "version": "0.9.5",
   "author": { "name": "Max Grathwohl, Lam Anh Nguyen, Szymon Kulpinski" }

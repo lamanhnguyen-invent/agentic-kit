@@ -1,4 +1,4 @@
-# invent-agentic-kit
+# agentic-kit
 
 A Claude Code plugin that gives Invent projects a shared way of building with Claude: setting a repo up once.
 
