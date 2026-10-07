@@ -22,7 +22,7 @@
  * invent patch: repo type via INVENT_REPO_TYPE ('demo' | 'prod', default and
  * fallback 'prod'). Demo repos may commit, merge, rebase, reset and push on
  * main and merge/close PRs and issues; deleting main (local or remote),
- * force-pushing to main and gh repo/release deletion stay blocked. Wired by agentic-kit's hooks/hooks.json;
+ * force-pushing to main and gh repo/release deletion stay blocked. Wired by invent-agentic-kit's hooks/hooks.json;
  * configure via "env" in .claude/settings.json, see the kit's README.
  */
 

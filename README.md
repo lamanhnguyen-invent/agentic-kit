@@ -1,4 +1,4 @@
-# agentic-kit
+# invent-agentic-kit
 
 A Claude Code plugin that gives Invent projects a shared way of building with
 Claude: one guided setup, safety hooks and secret-file rules that apply
@@ -294,15 +294,12 @@ local copy or from the git repo:
 
 ```
 /plugin marketplace add <path to this folder or git URL>
-/plugin install agentic-kit@agentic-kit
+/plugin install invent-agentic-kit@invent-agentic-kit
 ```
 
 Restart Claude Code, open your project, and run `/agentic-kit-setup`.
 
-Install either this kit or `invent-agentic-kit`, not both: they ship the same
-hooks, which would then run twice on every tool call.
-
-To update: `/plugin marketplace update agentic-kit`, then restart.
+To update: `/plugin marketplace update invent-agentic-kit`, then restart.
 To see or disable the hooks: `/hooks`, or turn the plugin off in `/plugin`.
 
 ### Requirements

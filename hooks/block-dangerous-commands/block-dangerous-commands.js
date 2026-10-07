@@ -14,7 +14,7 @@
  * HOOK_ASK_STRICT to the literal string "true" to have that level prompt the
  * user ("ask") instead of blocking outright ("deny").
  *
- * invent patch: wired by agentic-kit's hooks/hooks.json (Bash and
+ * invent patch: wired by invent-agentic-kit's hooks/hooks.json (Bash and
  * PowerShell). Set the variables above via "env" in .claude/settings.json,
  * see the kit's README.
  */
