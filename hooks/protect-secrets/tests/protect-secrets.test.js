@@ -248,7 +248,7 @@ describe('Unit: checkBashCommand()', () => {
     for (const cmd of ['grep -nE "^(STACK_NAME|AWS_REGION|ENV)\\b" Makefile', 'grep -E "(ENV|STAGE)=" Makefile', 'grep -riE "UPDATE|INSERT|SET |" src']) {
       it(`allows ${cmd}`, () => bashAllowed(cmd));
     }
-    // a `;` in a comment stops a rule in every form, so code written through a heredoc isn't a key read
+    // code written through a heredoc is no key read
     it('allows a heredoc of code with a comment and .key', () => bashAllowed("cat >> records.py <<'PY'\n# parsers (tolerant; map labels)\ndef f(field):\n    return field.key\nPY"));
     it('blocks . ./.env after a newline', () => bashBlocked('true\n. ./.env', 'source-env'));
     it('blocks > .env after a newline', () => bashBlocked('true\n> .env', 'truncate-secrets'));
@@ -881,7 +881,9 @@ describe('grep-env bash pattern (demo-take bypass 1)', () => {
   it('blocks a double-quoted grep of .env', () => bashBlocked('grep "API_KEY" .env', 'grep-env'));
   it('blocks a double-quoted .env filename', () => bashBlocked('grep KEY ".env"', 'grep-env'));
   it('blocks a single-quoted .env filename', () => bashBlocked("grep KEY '.env'", 'grep-env'));
-  it('blocks a quoted path to .env', () => bashBlocked('grep "/tmp/.env"', 'grep-env'));
+  it('blocks a quoted path to .env', () => bashBlocked('grep KEY "/tmp/.env"', 'grep-env'));
+  // with no file operand, grep searches stdin for the text
+  it('allows grep for the text /tmp/.env on stdin', () => bashAllowed('grep "/tmp/.env"'));
   it('blocks a single-quoted .env.local filename', () => bashBlocked("rg KEY '.env.local'", 'grep-env'));
   it('blocks awk with a quoted program against .env.local', () => bashBlocked('awk -F= "/KEY/{print}" .env.local', 'grep-env'));
   it('blocks grep of .env after another command', () => bashBlocked('cat foo && grep X .env', 'grep-env'));

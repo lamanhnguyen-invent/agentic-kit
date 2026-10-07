@@ -1,7 +1,8 @@
 ---
 name: agentic-kit-setup
 description: Walk the user through onboarding their personal and project CLAUDE.md files with Invent's agentic-coding guidelines and workflow, the repo type (demo or prod), the project's secret-file deny rules, its pre-commit quality gate, and an optional personal statusline and notification. Backs the repo's Claude Code files up first and ends by running repo-setup, which moves instructions into rules, skills, hooks or permissions. Use when the user runs /agentic-kit-setup or asks to set up Invent's Claude Code conventions.
-allowed-tools: Bash(node ${CLAUDE_PLUGIN_ROOT}/skills/repo-setup/scripts/backup.js *)
+# Any path to backup.js: the plugin path may contain a space and get quoted, and on Windows Claude may run it via PowerShell.
+allowed-tools: Bash(node *repo-setup/scripts/backup.js*) PowerShell(node *repo-setup/scripts/backup.js*)
 ---
 
 Walk the user through this step by step, one question at a time via AskUserQuestion.
@@ -9,9 +10,15 @@ Never silently rewrite a file — always show the exact block you intend to
 insert and ask the user for explicit confirmation before writing it. The one
 exception is Step 7, which the backups cover.
 
-## Step 0 — Back up
+## Step 0 — Check Node, back up
 
-Find, with Glob, the files this setup may change:
+First run `node --version`. The kit's hooks are Node scripts, and without
+Node they fail silently, so none of its guards would run. If the command
+fails or prints a version below 18, tell the user to install Node.js 18 or
+newer (https://nodejs.org), restart Claude Code and run `/agentic-kit-setup`
+again, and stop.
+
+Then find, with Glob, the files this setup may change:
 
 - `CLAUDE.md`, `.claude/CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md`
 - `CLAUDE.md` files in subdirectories
@@ -24,7 +31,7 @@ Never back up `.claude/settings.local.json`, `.mcp.json` or `.env` files.
 - If none exist: say there is nothing to back up and go to Step 1.
 - Otherwise back them up without asking:
 
-      node ${CLAUDE_PLUGIN_ROOT}/skills/repo-setup/scripts/backup.js save .repo-setup-backup <file> <file> ...
+      node "${CLAUDE_PLUGIN_ROOT}/skills/repo-setup/scripts/backup.js" save .repo-setup-backup <file> <file> ...
 
   Show the script's output and remember the restore command it prints for
   Step 8. If the script fails, stop.
@@ -68,10 +75,10 @@ for every repo, not only Python ones.
 1. If `./.claude/settings.json` already sets `env.INVENT_REPO_TYPE`, show the
    value and ask whether to keep it. Otherwise ask via AskUserQuestion:
    **"Is this a demo or a prod repo?"**
-   - **Demo** — one-off demo, spike or prototype. Committing and pushing on
-     main is fine: `git-safety` only blocks deleting or force-pushing
-     main/master and `gh repo delete` / `gh release delete`. Pre-commit
-     checks are advisory.
+   - **Demo** — one-off demo, spike, prototype or hackathon app. Committing
+     and pushing on main is fine: `git-safety` only blocks deleting or
+     force-pushing main/master and `gh repo delete` / `gh release delete`.
+     Pre-commit checks are advisory.
    - **Prod** — code that will be maintained. `git-safety` blocks commits,
      merges, rebases, resets and pushes on main/master, and merging or
      closing PRs and issues via `gh`. Pre-commit checks are blocking.
@@ -81,28 +88,46 @@ for every repo, not only Python ones.
 
 ## Step 3 — Project CLAUDE.md (./CLAUDE.md)
 
-1. Check whether `./CLAUDE.md` exists in the current project.
-   - If missing: first give the repo a base `CLAUDE.md`, so the Invent
-     block is not all it holds. If `AGENTS.md` exists, ask whether to create
-     `./CLAUDE.md` with the single line `@AGENTS.md`. Otherwise tell the
-     user you are starting the built-in `/init`, and invoke the `init` skill
-     with the Skill tool; if the Skill tool can't run it, tell the user to
-     type `/init` and to run `/agentic-kit-setup` again afterwards, and
-     stop. Then show the Invent baseline below and ask whether to append it.
-   - If it exists: read it and use your judgment to check whether it already
-     has an "Invent Project Guidelines" section (substance, not exact title).
-     - If present, marked v0.5, stating the same repo type, and mentioning
+Claude Code reads `AGENTS.md` only while the project has no `CLAUDE.md`, so a
+`CLAUDE.md` next to an `AGENTS.md` must import it with an `@AGENTS.md` line.
+
+1. Find the project `CLAUDE.md`. Claude Code loads `./CLAUDE.md` and
+   `./.claude/CLAUDE.md` alike, so:
+   - only `./.claude/CLAUDE.md` exists → it is the project `CLAUDE.md`;
+   - both exist → `./CLAUDE.md` is the project `CLAUDE.md`;
+   - neither exists → there is none.
+   "`CLAUDE.md`" below means that file; never create a second one next to
+   an existing one. Look for an existing Invent block in both files: if one
+   holds it, that is the file to update. Then check whether `./AGENTS.md`
+   exists.
+   - **No `CLAUDE.md`, no `AGENTS.md`:** give the repo a base `CLAUDE.md`
+     first, so the Invent block is not all it holds: tell the user you are
+     starting the built-in `/init`, and invoke the `init` skill with the
+     Skill tool. If the Skill tool can't run it, tell the user to type
+     `/init` and to run `/agentic-kit-setup` again afterwards, and stop.
+     Then show the block below and ask whether to append it.
+   - **No `CLAUDE.md`, but `AGENTS.md`:** don't run `/init`. Show a
+     `CLAUDE.md` of an `@AGENTS.md` line, a blank line and the block below,
+     and ask whether to create it.
+   - **`CLAUDE.md` and `AGENTS.md`, without an `@AGENTS.md` line:** tell the
+     user Claude ignores `AGENTS.md` right now, and ask whether to add
+     `@AGENTS.md` as the first line of `CLAUDE.md`. Then continue with the
+     next case.
+   - **`CLAUDE.md` exists:** read it and use your judgment to check whether it
+     already has an "Invent Project Guidelines" section (substance, not
+     exact title).
+     - If present, marked v0.6, stating the same repo type, and mentioning
        pre-commit only if Step 5 applies to this repo: tell the user it's
        already set up, move to Step 4.
-     - If present but older (v0.4, v0.3, v0.2, v0.1 or unversioned), stating the other
-       repo type, or differing on pre-commit: show the diff to the block
-       below and ask whether to replace the old section with it.
+     - If present but older (v0.5, v0.4, v0.3, v0.2, v0.1 or unversioned), stating the
+       other repo type, or differing on pre-commit: show the diff to the
+       block below and ask whether to replace the old section with it.
      - If missing: show the block below and ask whether to append it.
 
-Invent baseline block (v0.5). It is written for **prod**; for a **demo** repo,
+Invent baseline block (v0.6). It is written for **prod**; for a **demo** repo,
 swap in the demo lines listed after it.
 
-    ## Invent Project Guidelines (v0.5)
+    ## Invent Project Guidelines (v0.6)
 
     Repo type: **prod** (`INVENT_REPO_TYPE` in `.claude/settings.json`; don't
     change it yourself).
@@ -114,6 +139,8 @@ swap in the demo lines listed after it.
     1. **Grill it** — stress-test the approach against the code and existing
        docs: ask the user to run `/grill-with-docs` (only the user can start
        it), or invoke the `grilling` and `domain-modeling` skills yourself.
+       Put each round of questions into AskUserQuestion (max 4 per call,
+       recommended answer as first option).
     2. **Plan it** — create the feature branch, then write the plan to
        `plans/<branch name without prefix>.md` (`feature/PROJ-123-login` →
        `plans/PROJ-123-login.md`) using the template below. Every acceptance
@@ -130,8 +157,9 @@ swap in the demo lines listed after it.
        pre-commit hooks; fix until green. Tick each criterion in the plan
        file once its test passes.
     6. **Review it** — run the `pr-review` agent on the branch; it reads the
-       plan file itself and runs on Opus (the Sonnet cap is for implementing
-       subagents only). Address its findings before opening the PR.
+       plan file itself. It runs on Opus: don't override its model, the
+       Sonnet cap is for implementation subagents only. Address its
+       findings before opening the PR.
 
     Commit the plan file with the change, so reviewers see what was asked.
 
@@ -151,7 +179,7 @@ swap in the demo lines listed after it.
         ## Out of scope
         - ...
 
-    ### Invent tooling (v0.5)
+    ### Invent tooling (v0.6)
 
     - **Pre-tool-use hooks (active):** `protect-secrets` (Read/Edit/Write/Grep/
       Bash/PowerShell), `block-dangerous-commands` and `git-safety`
@@ -205,9 +233,10 @@ describe them. In either repo type:
 
 ## Step 4 — Project settings: deny rules and repo type (./.claude/settings.json)
 
-Claude Code's own permission rules stop Claude's file tools, and file commands
-like `cat` in Bash, from touching these paths — on every OS, before any hook
-runs. The `env` entry tells the `git-safety` hook the repo type from Step 2;
+Claude Code's own permission rules stop Claude's file tools (Read, Edit,
+Write, Grep, Glob) from touching these paths, on every OS. They don't
+reliably stop shell commands such as `head .env`; the kit's `protect-secrets`
+hook covers those. The `env` entry tells the `git-safety` hook the repo type from Step 2;
 hooks read it on every call. Project settings are committed, so both apply
 to everyone on the team.
 
@@ -221,6 +250,24 @@ to everyone on the team.
 2. Remind the user to commit `.claude/settings.json`. The repo type applies
    from the next tool call once the file is saved. Someone who needs a
    different value for themselves can set it in `.claude/settings.local.json`.
+3. If the project is a git repo, check that `.env` files are git-ignored:
+   `git check-ignore -q .env` and `git check-ignore -q .env.local` (they
+   work even if the files don't exist). The deny rules only stop Claude;
+   without an ignore entry a later `git add .` still commits the secrets.
+   - Both ignored: say so and move on.
+   - Otherwise: show the lines below and ask whether to append them to
+     `./.gitignore` (create it if missing). Never remove existing lines.
+
+         .env
+         .env.*
+         !.env.example
+         !.env.sample
+         !.env.template
+
+   - If `.env` is already tracked (`git ls-files --error-unmatch .env`
+     succeeds), the ignore entry won't untrack it: tell the user, and that
+     `git rm --cached .env` stops tracking it while keeping the file. Don't
+     run it yourself. If it was ever pushed, the secrets should be rotated.
 
 Rules (bare names match at any depth in the project; a `!` rule carves an
 exception out of the rules listed before it, so keep the order):
@@ -311,10 +358,18 @@ Step 6.
    separate commit (`pre-commit run ruff-format --all-files`) or leave it:
    each file then gets formatted the first time a commit touches it.
 
+If a `uv` or `uvx` command fails with `invalid peer certificate` or
+`UnknownIssuer`, a company proxy re-signs HTTPS: tell the user to set
+`UV_SYSTEM_CERTS=1` (uv then trusts the Windows/macOS certificate store,
+e.g. under `"env"` in `~/.claude/settings.json` or in the shell profile) and
+retry. Don't switch off TLS checks.
+
 radon, xenon and ruff are installed by pre-commit itself in isolated
 environments — nothing to add to the project. `ty` runs from the project
-venv: the block below uses `uv run`; use `poetry run` for poetry, and drop
-the prefix for a plain venv (the venv must be active when committing).
+venv: the block below uses `uv run --no-sync`, so a commit never re-syncs
+the venv or rewrites `uv.lock` (and needs no network); use `poetry run` for
+poetry, and drop the prefix for a plain venv (the venv must be active when
+committing).
 
 Demo block (advisory):
 
@@ -383,10 +438,10 @@ Optional ty block (append to the `repo: local` hooks if the user chose it):
 
           # Type checking from the project venv, so project imports resolve.
           # Prod: blocks on any type error.
-          # Demo: use `uv run ty check --exit-zero` and add `verbose: true`.
+          # Demo: use `uv run --no-sync ty check --exit-zero` and add `verbose: true`.
           - id: ty
             name: ty (type check)
-            entry: uv run ty check
+            entry: uv run --no-sync ty check
             language: system
             types: [python]
             exclude: ^(tests/|scripts/)
@@ -399,11 +454,27 @@ and these hooks. By hand: change `INVENT_REPO_TYPE`, add `xenon`, drop the
 ## Step 6 — Statusline and notification (personal, optional)
 
 Both are personal preferences, so they go into the user's own
-`~/.claude/settings.json`, not the project. Ask via AskUserQuestion
-(multiSelect) which to set up; skip this step if they pick neither:
+`~/.claude/settings.json`, not the project.
+
+First check what is already there, before asking anything:
+
+- Read `~/.claude/settings.json`. The statusline counts as set up if
+  `statusLine.command` runs `invent-kit/statusline.js`; the notification if
+  a `hooks.Stop` entry runs `invent-kit/notify.js`.
+- For each one that is set up, compare `~/.claude/invent-kit/<script>` with
+  `${CLAUDE_PLUGIN_ROOT}/extras/<script>`, ignoring line endings
+  (e.g. `git diff --no-index --ignore-cr-at-eol --quiet <a> <b>`).
+
+Then:
+
+- **Both set up, scripts current:** tell the user, skip to Step 7.
+- **Set up, script outdated or missing:** ask whether to update the copy
+  in `~/.claude/invent-kit/` to this kit version. Settings stay unchanged.
+- **Not set up:** ask via AskUserQuestion (multiSelect) only about the
+  ones that are missing; skip the rest of this step if they pick neither:
 
 - **Statusline** — two lines under the prompt:
-  `[Opus]  effort:medium  ctx:23%/1000k  $0.4123  today:~$12.34  +120/-45  5h:37%`
+  `[Opus]  effort:medium  ctx:23%/1000k  $0.41  today:~$12.34  +120/-45  5h:37%`
   and `(main*)  ~/code/my-repo`. `today:~$` is an estimate at API list prices,
   not the bill on a subscription; `5h` only shows on Pro/Max subscriptions.
 - **Notification** — a desktop notification "Claude finished in <project> -
@@ -411,8 +482,8 @@ Both are personal preferences, so they go into the user's own
   noisy if you watch Claude work anyway.
 
 1. Copy the chosen scripts from `${CLAUDE_PLUGIN_ROOT}/extras/` (`statusline.js`,
-   `notify.js`) to `~/.claude/invent-kit/`, overwriting older copies from this
-   kit. They are copied because the plugin folder moves on every update.
+   `notify.js`) to `~/.claude/invent-kit/`. They are copied because the plugin
+   folder moves on every update. Only copy what the user agreed to above.
 2. Read `~/.claude/settings.json` (create it with `{}` if missing) and show the
    exact change before writing it. Use the absolute home path with forward
    slashes (`C:/Users/<you>/...` on Windows), since the command may run in Git
@@ -440,10 +511,25 @@ leaves the Invent block alone.
    each file change, depending on the permission mode.
 2. Invoke the `repo-setup` skill with the Skill tool and the arguments
    `--no-questions`.
+3. If the user declined something in Steps 1–6 (the Invent block, a
+   `CLAUDE.md`, deny rules), skip any repo-setup finding that would create
+   or add it after all, and name it in Step 8. `--no-questions` applies only
+   to repo-setup's own findings, not to what the user already turned down.
 
 ## Step 8 — Done
 
 Confirm all files are in the desired state and summarize what changed. Give
-both restore commands: the one from Step 7 undoes only the restructuring,
-the one from Step 0 brings the repo back to how it was before this setup.
-The backup folder can be deleted once the user is happy.
+both restore commands. The one from Step 7 undoes only the restructuring.
+The one from Step 0 puts back every file that existed before this setup, as
+it was then. Files this setup created (a new `CLAUDE.md`, `.claude/settings.json`,
+`.pre-commit-config.yaml`, rules and skills from Step 7) stay in place, and so
+do changes to `.gitignore` and to `~/.claude`; delete or revert those by hand
+if needed. The backup folder can be deleted once the user is happy.
+
+Then point to Claude Code's built-in checks for tidying up the instruction
+files later. Both only propose changes and edit nothing without the user's OK:
+
+- `/doctor` — trims `CLAUDE.md` of what Claude can read from the code itself
+  (directory layouts, dependency lists, architecture overviews).
+- `/doctor prompt-audit` — finds outdated, contradicting or broken
+  instructions across `CLAUDE.md`, rules, skills and agents.
