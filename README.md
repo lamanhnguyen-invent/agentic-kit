@@ -149,7 +149,9 @@ Our changes are marked `invent patch:` in the scripts and covered by
 - `protect-secrets` drops an allowlisted name only when it is a whole
   token, so `cat .env;.env.example` is still caught; expands Grep globs
   (`.env*`, `{.env,.env.local}`); treats `.ENV` as `.env`; lets a quoted
-  regex like `grep -v '\.env'` pass; catches `gci env:` (PowerShell env dump).
+  regex like `grep -v '\.env'` pass; catches `gci env:` (PowerShell env dump);
+  catches `ENV`/`PRINTENV` in any case, but counts `printenv` only as a
+  command: `grep -rn printenv README.md` and `printenv PATH` pass.
 - `protect-secrets` doesn't block text that only mentions a secret file:
   a reading command counts only where a command starts, so commit messages,
   `echo` strings and PR bodies pass; heredoc bodies are data unless fed to a

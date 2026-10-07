@@ -204,8 +204,10 @@ const BASH_PATTERNS = [
   // HIGH - Environment exposure
   // invent patch: a newline separates commands too. `ENV`/`PRINTENV` in any
   // case too (macOS finds the binary; `SET`/`EXPORT` are no commands), but not
-  // glued into a regex alternation: `grep -E "^(A|ENV)"`.
-  { level: 'high', id: 'env-dump',               regex: /\bprintenv\b|(?:^|[;&|(\n]\s*)(?:env|set|export|declare\s+-x)\s*(?:$|[;&|)\n])|\b[Pp][Rr][Ii][Nn][Tt][Ee][Nn][Vv]\b|(?:^|[;&\n]\s*|(?<!\w)\|\s*|(?<![\w"'^|(])\(\s*)[Ee][Nn][Vv]\s*(?:$|[;&)\n]|\|(?!\w))/, reason: 'Environment dump may expose secrets' },
+  // glued into a regex alternation: `grep -E "^(A|ENV)"`, `grep "a\|ENV"`.
+  // `printenv` counts only where a command starts (not in a grep pattern), and
+  // `printenv PATH`, one variable without a secret word, passes.
+  { level: 'high', id: 'env-dump',               regex: /(?:^|[;&|(\n]\s*)(?:env|set|export|declare\s+-x)\s*(?:$|[;&|)\n])|(?:^|[;&\n]\s*|(?<![\w\\])\|\s*|(?<![\w"'^|(])\(\s*|\b(?:sh|bash|zsh)\s+-c\s+["'])(?:[Pp][Rr][Ii][Nn][Tt][Ee][Nn][Vv]\b(?!\s+(?![\w]*(?:SECRET|KEY|TOKEN|PASSWORD|PASSW|CREDENTIAL|AUTH|PRIVATE))\w)|[Ee][Nn][Vv]\s*(?:$|[;&)\n"']|\|(?!\w)))/, reason: 'Environment dump may expose secrets' },
   // invent patch: PowerShell env drive and .NET equivalents of env-dump: the
   // whole drive, or one variable with a secret word (`Env:PATH` stays allowed).
   // The cmdlet starts a command or a script block, or follows a quote after

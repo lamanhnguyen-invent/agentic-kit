@@ -236,6 +236,13 @@ describe('Unit: checkBashCommand()', () => {
     it('allows Get-Item Env:PATH', () => bashAllowed('Get-Item Env:PATH'));
     it('allows gci $env:USERPROFILE', () => bashAllowed('gci $env:USERPROFILE'));
     it('blocks PRINTENV (macOS finds it)', () => bashBlocked('PRINTENV', 'env-dump'));
+    for (const cmd of ['printenv GITHUB_TOKEN', 'printenv | grep KEY', 'ls; printenv', 'x=$(printenv)', 'bash -c "printenv"']) {
+      it(`blocks ${cmd}`, () => bashBlocked(cmd, 'env-dump'));
+    }
+    // a printenv in a search pattern, or one plain variable, is no env dump
+    for (const cmd of ['grep -n "ENV alone\\|PRINTENV (macOS" a.test.js', 'grep "a\\|ENV" Makefile', 'grep -rn printenv README.md', 'printenv PATH', 'printenv HOME']) {
+      it(`allows ${cmd}`, () => bashAllowed(cmd));
+    }
     it('blocks ENV alone', () => bashBlocked('ENV', 'env-dump'));
     it('blocks $x = Get-Content env:GITHUB_TOKEN', () => bashBlocked('$x = Get-Content env:GITHUB_TOKEN', 'ps-env-dump'));
     it('allows a heredoc writing CI YAML with env:', () => bashAllowed("cat > .github/workflows/ci.yml <<'EOF'\njobs:\n  b:\n    env:\n      A: 1\nEOF"));
