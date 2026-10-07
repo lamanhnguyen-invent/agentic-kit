@@ -82,6 +82,9 @@ description: Deploys the app to staging or production. Use when the user asks to
 
 A deny rule and a hook, both in `.claude/settings.json` [S1] [S3]:
 
+The hook formats only the file Claude just edited. It reads the path with
+Node, not `jq`: hooks need Node anyway, and most Windows machines lack `jq`.
+
 ```json
 {
   "permissions": {
@@ -91,7 +94,7 @@ A deny rule and a hook, both in `.claude/settings.json` [S1] [S3]:
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
-        "hooks": [{ "type": "command", "command": "jq -r '.tool_input.file_path' | xargs npx prettier --write" }]
+        "hooks": [{ "type": "command", "command": "node -e \"const f=JSON.parse(require('fs').readFileSync(0,'utf8')).tool_input.file_path; require('child_process').execSync('npx prettier --write ' + JSON.stringify(f), {stdio: 'inherit'})\"" }]
       }
     ]
   }
