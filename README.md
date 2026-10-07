@@ -171,6 +171,14 @@ Our changes are marked `invent patch:` in the scripts and covered by
   forms, and block if any matches: as written, with `\⏎` line continuations
   joined (`r\⏎m -rf /`), with comments stripped, and with command words in
   lower case (`RM -rf /`, `GIT reset --hard`; macOS and Windows run them).
+- `block-dangerous-commands` and `git-safety` skip a heredoc body that goes
+  to a plain data sink (`cat > CLAUDE.md <<'EOF'`, `tee`, `git commit -F -`,
+  `git commit -m "$(cat <<'EOF' …)"`, `gh … --body-file -`), so a file or
+  commit message may mention `gh release delete` or `rm -rf /`. Every other
+  heredoc is still checked (`bash <<EOF`, `python - <<EOF`), and so is every
+  body when the command runs a shell, script or interpreter anywhere
+  (`| sh`, `bash x.sh`, `./x.sh`, `source`, `python`, …). A mention inside
+  `-m "…"` or an `echo` string is still blocked.
 - `git-safety` only treats `main`/`master` as protected when it is the whole
   ref, so `git push origin feature/main-page` is allowed; reads the branch
   from the session's working directory (or the `git -C` one); has the
