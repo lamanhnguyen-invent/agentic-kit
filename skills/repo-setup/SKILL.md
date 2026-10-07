@@ -66,9 +66,10 @@ finding wherever the baseline says the content belongs somewhere else:
 |---|---|---|
 | A fact every session needs | stays in `CLAUDE.md` | P-01 |
 | Vague, contradictory, duplicated or outdated text | reword or delete | P-03, P-04 |
+| What Claude can read from the code (directory layout, dependency list, architecture overview) | delete | P-07 |
 | An instruction for some files only | `.claude/rules/<topic>.md` with `paths:` | P-10 |
 | A rule without `paths:` that names specific files | add `paths:` | P-11 |
-| Conventions of one subdirectory | `CLAUDE.md` in that subdirectory | P-12 |
+| Conventions of one folder | `.claude/rules/<topic>.md` with `paths:` for that folder; a `CLAUDE.md` in the subdirectory only for a package that is a project of its own | P-12 |
 | A multi-step procedure or reference material | `.claude/skills/<name>/SKILL.md` | P-13 |
 | "Every time X, do Y" that must be reliable | hook in `.claude/settings.json` | P-14 |
 | "Never do X" that must hold | `permissions.deny` in `.claude/settings.json` | P-15 |
@@ -96,7 +97,11 @@ Show a numbered list. For each finding:
 
 For a hook, draft it only when the command is already known from the repo
 (a formatter or linter it uses, a command to block). Otherwise list the
-finding as a recommendation without a draft and don't apply it.
+finding as a recommendation without a draft and don't apply it. A hook on
+Claude's edits works on the edited file only, as in the baseline example. A
+check over the whole repo (all tests, lint or format of every file) belongs
+in pre-commit or CI, not in a Claude hook: run on every edit it also hits
+files another session is changing.
 
 Then ask which findings to apply: **all**, **let me pick** (the user gives
 the numbers) or **none**. On none, go to Step 7. With `--no-questions`,

@@ -193,5 +193,5 @@ async function main() {
 if (require.main === module) {
   main();
 } else {
-  module.exports = { priceFor, costOf, dailyCost, render };
+  module.exports = { priceFor, costOf, dailyCost, render, localDate };
 }

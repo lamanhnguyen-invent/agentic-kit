@@ -15,7 +15,7 @@ Syntax details, when drafting a file: [skills](https://code.claude.com/docs/en/s
 | Mechanism | Loads | Costs context | Holds |
 |---|---|---|---|
 | `CLAUDE.md` at the root (or `.claude/CLAUDE.md`) | Every session, re-read after compaction | Every line, every session | Facts Claude needs all the time |
-| `CLAUDE.md` in a subdirectory | When Claude reads a file in that directory | Only then | Conventions of that directory |
+| `CLAUDE.md` in a subdirectory | When Claude reads a file in that directory | Only then | Conventions of a package that is a project of its own |
 | `.claude/rules/*.md` with `paths:` | When Claude reads a matching file | Only then | A constraint for some files |
 | `.claude/rules/*.md` without `paths:` | Every session | Same as `CLAUDE.md` | A topic split out of `CLAUDE.md` |
 | `.claude/skills/<name>/SKILL.md` | Name and description every session; the body when invoked | Low | Procedures and reference material |
@@ -30,18 +30,19 @@ Source: the table in [S1]; file locations in [S2].
 
 ### What stays in CLAUDE.md
 
-- **P-01** `CLAUDE.md` holds what every session needs: build and test commands, directory layout, coding conventions, team norms. [S1] [S2]
+- **P-01** `CLAUDE.md` holds what every session needs and can't read from the code: the repo's purpose, build and test commands, pitfalls and their rationale, non-default conventions, team norms, pointers to skills. [S1] [S2]
 - **P-02** Each `CLAUDE.md` stays under 200 lines. Longer files cost context and are followed less reliably. [S1] [S2]
 - **P-03** Instructions are concrete enough to verify: "Use 2-space indentation", not "Format code properly". [S2]
 - **P-04** No two instructions contradict each other, across `CLAUDE.md`, nested `CLAUDE.md` files and `.claude/rules/`. [S2]
 - **P-05** A repo with `AGENTS.md` and a `CLAUDE.md` has the `CLAUDE.md` import it with `@AGENTS.md` instead of repeating it. Claude Code reads `AGENTS.md` on its own only while no `CLAUDE.md` or `CLAUDE.local.md` exists. [S2]
 - **P-06** `@path` imports organise a file but save no context: imported files load at launch too. [S2]
+- **P-07** What Claude can derive from the code is deleted, not moved: directory layouts, dependency lists, architecture overviews. [S2]
 
 ### What moves out
 
 - **P-10** An instruction for some files only (one language, one layer, file names that occur in several places) is a rule in `.claude/rules/<topic>.md` with `paths:`. [S1] [S2] [S3]
 - **P-11** A rule without `paths:` that names specific files or directories gets `paths:`. Unscoped, it costs the same as `CLAUDE.md`. [S1]
-- **P-12** Conventions for one subdirectory, such as one team's package in a monorepo, are a `CLAUDE.md` in that subdirectory. Use a path-scoped rule instead when the concern cuts across several directories. [S1]
+- **P-12** Conventions for one folder are a rule with `paths:` for that folder, such as `paths: ["src/db/**"]`. A `CLAUDE.md` in the subdirectory fits only a package that is a project of its own, such as one team's package in a monorepo. [S1] [S2]
 - **P-13** A multi-step procedure (deploy, release, review checklist) is a skill. So is reference material Claude needs only sometimes (API docs, style guide). [S1] [S2] [S3]
 - **P-14** "Every time X, do Y" that must happen reliably (format after edit, notify on completion) is a hook. In `CLAUDE.md` it is a request that Claude may skip. [S1] [S3]
 - **P-15** "Never do X" that must hold is a `permissions.deny` rule or a `PreToolUse` hook that exits with code 2. A prompt instruction can fail in long sessions or under prompt injection. [S1] [S2] [S3]
@@ -90,7 +91,7 @@ A deny rule and a hook, both in `.claude/settings.json` [S1] [S3]:
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
-        "hooks": [{ "type": "command", "command": "npx prettier --write ." }]
+        "hooks": [{ "type": "command", "command": "jq -r '.tool_input.file_path' | xargs npx prettier --write" }]
       }
     ]
   }

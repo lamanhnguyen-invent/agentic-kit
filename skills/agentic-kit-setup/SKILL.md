@@ -132,9 +132,9 @@ swap in the demo lines listed after it.
     Repo type: **prod** (`INVENT_REPO_TYPE` in `.claude/settings.json`; don't
     change it yourself).
 
-    Suggested workflow for bigger changes or tickets. It is not enforced;
-    small, low-risk changes don't need it. It pays off most in code you don't
-    know yet.
+    Suggested workflow for bigger changes or tickets. It is not enforced; if
+    the diff can be described in one sentence, skip it. It pays off most in
+    code you don't know yet.
 
     1. **Grill it** — stress-test the approach against the code and existing
        docs: ask the user to run `/grill-with-docs` (only the user can start

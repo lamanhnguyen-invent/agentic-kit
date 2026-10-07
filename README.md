@@ -222,8 +222,8 @@ Claude dig through the code and docs and ask you questions, which is a fast way
 to understand how things fit together before anything changes.
 
 If you already know what you want to do and where, skip the loop: tell Claude
-your plan directly — `ponytail` is active anyway. Smaller changes don't need a
-long grilling session.
+your plan directly — `ponytail` is active anyway. Anthropic's rule of thumb:
+if you could describe the diff in one sentence, skip the plan.
 
 1. **Grill it** — `/grill-with-docs` stress-tests the approach and writes
    resolved terms to `GLOSSARY.md` and decisions to ADRs as you go.
