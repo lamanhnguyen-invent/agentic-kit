@@ -189,6 +189,28 @@ describe('git-safety: repo type', () => {
   it('prod blocks git commit on main', () => assert.strictEqual(gs.checkCommand('git commit -m x', 'main').blocked, true));
 });
 
+describe('git-safety: prod stages by name and asks before a commit', () => {
+  const check = (c, repoType = 'prod', b = 'feat') => gs.checkCommand(c, b, 'high', { repoType });
+  for (const c of ['git add .', 'git add -A', 'git add -vA', 'git add --all', 'git add :/', 'git add *', 'git add "."', 'git add -- .',
+    'git add src/a.ts .', 'git stage .', 'git -C . add .', 'GIT ADD .', 'git add . && git commit -m x']) {
+    it(`prod blocks ${c}`, () => assert.strictEqual(check(c).blocked, true));
+  }
+  for (const c of ['git add src/a.ts', 'git add -u', 'git add ./src/a.ts', 'git add .gitignore', 'git add -p src', 'git status .']) {
+    it(`prod allows ${c}`, () => assert.deepStrictEqual([check(c).blocked, !!check(c).ask], [false, false]));
+  }
+  for (const c of ['git commit -m x', 'git commit -am x', 'git -C . commit -m x']) {
+    it(`prod asks before ${c}`, () => assert.deepStrictEqual([check(c).blocked, check(c).ask], [false, true]));
+  }
+  it('prod still blocks a commit on main', () => assert.strictEqual(check('git commit -m x', 'prod', 'main').blocked, true));
+  for (const c of ['git add .', 'git add -A', 'git commit -m x']) {
+    it(`demo neither blocks nor asks: ${c}`, () => assert.deepStrictEqual([check(c, 'demo').blocked, !!check(c, 'demo').ask], [false, false]));
+  }
+  it('the hook answers ask for a prod commit', () => {
+    const r = runHook('git-safety/git-safety.js', { tool_name: 'Bash', tool_input: { command: 'git commit -m x' }, cwd: os.tmpdir() });
+    assert.match(r.out, /"permissionDecision":"ask"/);
+  });
+});
+
 describe('git-safety: deleting or force-pushing the remote main stays blocked in demo', () => {
   const blocked = (c, b, repoType) => gs.checkCommand(c, b, 'high', { repoType }).blocked;
   for (const repoType of ['prod', 'demo']) {

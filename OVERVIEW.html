@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>invent-agentic-kit — v0.9.7</title>
+<title>invent-agentic-kit — v0.9.8</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -256,7 +256,7 @@
 <div class="wrap">
 
   <header class="hero">
-    <span class="kicker">invent-agentic-kit · Claude Code plugin · v0.9.7</span>
+    <span class="kicker">invent-agentic-kit · Claude Code plugin · v0.9.8</span>
     <h1>One setup step.<br><span class="accent">A shared way of building.</span></h1>
     <p>Install the kit (see <code>SETUP.md</code>), run one command per project, and every repo gets the same guardrails, the same quality checks and the same workflow for bigger changes.</p>
   </header>
@@ -289,7 +289,7 @@
       <div class="arrow" aria-hidden="true">→</div>
       <div class="flow-box"><div class="n">4</div><div class="t">Secret rules</div><div class="d">.env, keys, credentials off-limits</div></div>
       <div class="arrow" aria-hidden="true">→</div>
-      <div class="flow-box"><div class="n">5</div><div class="t">Pre-commit</div><div class="d">Lint, format, complexity (Python)</div></div>
+      <div class="flow-box"><div class="n">5</div><div class="t">Pre-commit</div><div class="d">Lint, format, complexity (Python, JS/TS)</div></div>
       <div class="arrow" aria-hidden="true">→</div>
       <div class="flow-box done"><div class="n">6</div><div class="t">Statusline</div><div class="d">Optional: cost and context</div></div>
       <div class="arrow" aria-hidden="true">→</div>
@@ -307,7 +307,7 @@
     <div class="row"><span><b>protect-secrets</b> also stops secrets from being copied, printed or sent out</span><span class="status live">always</span></div>
     <div class="row"><span><b>block-dangerous-commands</b> stops <code>rm -rf ~</code>, <code>git reset --hard</code>, force-push to main</span><span class="status live">always</span></div>
     <div class="row"><span><b>git-safety</b> prod: no commits or pushes on main, work on a branch. Demo: only deleting or force-pushing main is blocked</span><span class="status live">always</span></div>
-    <div class="row"><span><b>Pre-commit</b> checks lint, format and complexity on every commit: blocking in prod, advisory in demo</span><span class="status live">Python</span></div>
+    <div class="row"><span><b>Pre-commit</b> checks lint, format and complexity on every commit: blocking in prod, advisory in demo</span><span class="status live">Python · JS/TS</span></div>
     <p class="note"><b>Blocked?</b> Claude sees the reason and tries another way. If a block looks wrong, tell Claude what you meant. The guards are a seatbelt against slips, not a sandbox.</p>
   </section>
 
@@ -342,11 +342,6 @@
         <span class="tag planned">planned</span>
       </div>
       <div class="card planned">
-        <h3>Pre-commit for JS/TS</h3>
-        <p>Today only Python files are checked.</p>
-        <span class="tag planned">planned</span>
-      </div>
-      <div class="card planned">
         <h3>Testing guidelines</h3>
         <p>Which tests a change needs before merge.</p>
         <span class="tag planned">planned</span>
@@ -356,7 +351,7 @@
   </section>
 
   <footer>
-    invent-agentic-kit <span class="v">v0.9.7</span> · Details and reasoning in README.md.
+    invent-agentic-kit <span class="v">v0.9.8</span> · Details and reasoning in README.md.
   </footer>
 
 </div>

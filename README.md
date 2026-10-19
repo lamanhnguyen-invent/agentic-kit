@@ -29,7 +29,7 @@ a file silently, except in step 7:
 3. **Project CLAUDE.md** — adds the Invent project guidelines: the ticket
    workflow below and a summary of the hooks in use, worded for the repo
    type. Updates an older version of the block if it finds one (the block has
-   its own version, v0.7, which changes only when its text does, so a kit
+   its own version, v0.8, which changes only when its text does, so a kit
    update alone never asks you to replace it). In a repo
    without a `CLAUDE.md` it starts Claude Code's built-in `/init` first; next
    to an `AGENTS.md` it imports it with `@AGENTS.md` instead (Claude Code
@@ -60,10 +60,11 @@ one puts back every file that existed before the setup, as it was then.
 Files the setup created, and changes to `.gitignore` and `~/.claude`, stay
 in place. Step 7 never adds back what you declined earlier in the setup.
 
-Step 5 only runs for Python projects in a git repo (`.py` files anywhere in
-the repo count). The pre-commit checks cover Python files only; there are no
-checks for JS/TS or other languages (Prettier, ESLint, …) yet. In other repos
-the guidelines block from step 3 leaves the pre-commit part out.
+Step 5 only runs for Python or JS/TS projects in a git repo (`.py` files
+anywhere in the repo, or a `package.json` at its root). The pre-commit checks
+cover Python, JS and TS files; there are no checks for other languages yet.
+In other repos the guidelines block from step 3 leaves the pre-commit part
+out.
 
 **Statusline and notification.** Step 6 copies `extras/statusline.js` and
 `extras/notify.js` to `~/.claude/invent-kit/` and points your personal
@@ -110,6 +111,8 @@ other value means prod.
 | commit, merge, rebase, reset, push while on main/master | blocked | allowed |
 | `git push origin main` from another branch | blocked | allowed |
 | `gh pr merge`, `gh pr close`, `gh issue close` | blocked | allowed |
+| bulk staging: `git add .`, `-A`, `--all`, `:/`, `*` (by name and `git add -u` are fine) | blocked | allowed |
+| `git commit` on a feature branch | asks you first | allowed |
 | deleting main/master, locally or on the remote (`git push origin --delete main`, `:main`) | blocked | blocked |
 | force-pushing main/master (`--force`/`-f`/`--force-with-lease`, `+main`, or any force-push while on main) | blocked | blocked |
 | `gh repo delete`, `gh release delete` | blocked | blocked |
@@ -202,10 +205,21 @@ stop shell commands (a test let `head -1 .env` through); the
 opens files itself (`python -c ...`) is covered by neither, which needs
 Claude Code's sandbox.
 
+Deny rules and hooks both have to let a call through, and no hook can lift a
+deny rule. A deny rule on `git` or `gh` (`Bash(git push * main)`) therefore
+holds in demo repos too and overrides the repo type. So the kit keeps git
+rules in `git-safety` only: setup step 4 lists such deny rules (project,
+`settings.local.json`, `~/.claude/settings.json`) and offers to remove the
+project's. `/repo-setup` never turns a git instruction into a deny rule: it
+deletes a `CLAUDE.md` line the hooks already cover ("never push to main") and
+leaves the others in place.
+
 **Pre-commit hooks** are written into the project's `.pre-commit-config.yaml`
 by setup step 5. They run on every `git commit`, whoever makes the commit —
-Claude or a person. They check **Python files only**: a commit without `.py`
-files passes them untouched, and other languages (JS/TS, …) aren't checked yet.
+Claude or a person. They check **Python and JS/TS files**: a commit without
+such files passes them untouched, and other languages aren't checked yet.
+
+Python:
 
 | Hook | Demo repo | Prod repo | Runs from |
 |---|---|---|---|
@@ -215,13 +229,24 @@ files passes them untouched, and other languages (JS/TS, …) aren't checked yet
 | `ruff-format` — formatting | Formats | Formats | pre-commit's own environment |
 | `ty` — type checker *(optional)* | Lists type errors | Blocks on type errors | project venv (dev dependency), via `uv run --no-sync` so commits never rewrite `uv.lock` |
 
+JS/TS:
+
+| Hook | Demo repo | Prod repo | Runs from |
+|---|---|---|---|
+| `eslint` — lint and complexity | Lists findings and functions with complexity ≥ 11 | Blocks on errors and functions with complexity ≥ 21 | `node_modules` (dev dependency), via `npx --no-install` |
+| `prettier` — formatting | Formats | Formats | `node_modules` (dev dependency) |
+| `tsc` — type checker *(optional, TypeScript)* | Lists type errors | Blocks on type errors | `node_modules` (dev dependency) |
+
 Demo repos get advisory checks: findings are shown, but the commit goes
-through, so a one-off demo isn't slowed down. The one exception is
-`ruff-format`: when it reformats a file, the commit stops once — add the file
-and commit again. Prod repos get blocking checks. The thresholds and how to
-change them are explained in comments in the generated
-`.pre-commit-config.yaml`. `ty` is only added if you choose it during setup,
-because it must be installed in the project's venv to see its dependencies.
+through, so a one-off demo isn't slowed down. The one exception is the
+formatter (`ruff-format`, `prettier`): when it reformats a file, the commit
+stops once — add the file and commit again. Prod repos get blocking checks.
+The thresholds and how to change them are explained in comments in the
+generated `.pre-commit-config.yaml`. `ty` is only added if you choose it
+during setup, because it must be installed in the project's venv to see its
+dependencies. The JS/TS hooks use the project's own ESLint and Prettier
+config; setup offers a minimal `eslint.config.mjs` if there is none. Everyone
+who commits needs `npm install` (or the equivalent) done first.
 
 Each tool has one job: radon/xenon measure complexity, ruff lints and
 formats, ty checks types. ruff's own complexity rule (C901) stays off so
@@ -345,10 +370,15 @@ To see or disable the hooks: `/hooks`, or turn the plugin off in `/plugin`.
 
 - **Node.js ≥ 18** — all Claude Code hooks are Node scripts. Claude Code
   itself runs without Node, but then every guard of the kit silently stays
-  off; setup checks for Node first.
+  off; setup checks for Node first. Install it from the pre-approved
+  software in the Company Portal.
 - **git** — for `git-safety` and the pre-commit hooks.
 - **Python projects:** a project venv managed by `uv`, `poetry` or pip, plus
   `pre-commit`. Setup offers to install `pre-commit` and `ty` if they're
+  missing.
+- **JS/TS projects:** `pre-commit` (a Python tool, e.g. via
+  `uv tool install pre-commit`) and ESLint 9+, Prettier and, for tsc,
+  TypeScript as dev dependencies. Setup offers to install them if they're
   missing.
 - **Behind a company proxy:** if `uv` fails with `invalid peer certificate`,
   set `UV_SYSTEM_CERTS=1` so it trusts the system certificate store.

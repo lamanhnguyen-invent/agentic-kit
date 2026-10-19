@@ -19,8 +19,9 @@ question at a time via AskUserQuestion.
 
 1. Run `node --version`. The kit's hooks are Node scripts; without Node 18
    or newer they fail silently. If it is missing or older, tell the user to
-   install it (https://nodejs.org), restart Claude Code and start again,
-   and stop.
+   install it from the pre-approved software in the Company Portal (an older
+   version first has to be uninstalled there), restart Claude Code and start
+   again, and stop.
 2. Read `~/.claude/settings.json`. If `enabledPlugins` has an
    `invent-agentic-kit@…` entry set to `true`, the plugin is installed:
    with the copies as well, every hook would run twice. Tell the user to

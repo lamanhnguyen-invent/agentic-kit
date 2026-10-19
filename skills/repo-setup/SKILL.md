@@ -73,11 +73,23 @@ finding wherever the baseline says the content belongs somewhere else:
 | A multi-step procedure or reference material | `.claude/skills/<name>/SKILL.md` | P-13 |
 | "Every time X, do Y" that must be reliable | hook in `.claude/settings.json` | P-14 |
 | "Never do X" that must hold | `permissions.deny` in `.claude/settings.json` | P-15 |
+| "Never do X" about git or `gh` that the kit's hooks cover (list below) | delete; tell the user that `git-safety` or `block-dangerous-commands` blocks it according to the repo type. Never a deny rule: it would override the repo type | P-15 |
+| "Never do X" about git or `gh` that the hooks don't cover | leave the text where it is; no deny rule | P-15 |
 | A personal preference | `CLAUDE.local.md`, listed in `.gitignore` | P-16 |
 | `AGENTS.md` repeated in `CLAUDE.md` | `@AGENTS.md` import | P-05 |
 | `AGENTS.md` next to a `CLAUDE.md` without `@AGENTS.md` (Claude doesn't read it) | `@AGENTS.md` import | P-05 |
 | A rule, skill or subagent file in the wrong shape | fix the file | P-20 to P-23 |
 | A file in `.claude/commands/` | a skill with the same name | P-13 |
+
+The kit's hooks cover these git and `gh` rules. In prod repos `git-safety`
+blocks committing, merging, rebasing, resetting and pushing on main/master,
+pushing to main/master, `gh pr merge`, `gh pr close` and
+`gh issue close`, and bulk staging (`git add .`, `-A`, `--all`), and asks
+before every commit; demo repos allow these on purpose, so a "never" line about
+them contradicts the repo type there. In both repo types the hooks block
+deleting main/master, force-pushing, `gh repo delete`, `gh release delete`,
+`git reset --hard`, `git clean -f` and `git checkout .`. Delete a line only
+if everything it forbids is in this list.
 
 A `CLAUDE.md` over 200 lines (P-02) is not a finding of its own: say how
 many lines it has and how many remain after the findings above.

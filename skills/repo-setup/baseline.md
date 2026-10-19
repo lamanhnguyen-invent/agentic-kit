@@ -88,7 +88,7 @@ Node, not `jq`: hooks need Node anyway, and most Windows machines lack `jq`.
 ```json
 {
   "permissions": {
-    "deny": ["Edit(./.env)", "Bash(git push --force *)"]
+    "deny": ["Edit(./.env)", "Bash(npm publish *)"]
   },
   "hooks": {
     "PostToolUse": [
