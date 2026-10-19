@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>invent-agentic-kit — v0.9.6</title>
+<title>invent-agentic-kit — v0.9.7</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -256,9 +256,9 @@
 <div class="wrap">
 
   <header class="hero">
-    <span class="kicker">invent-agentic-kit · Claude Code plugin · v0.9.6</span>
+    <span class="kicker">invent-agentic-kit · Claude Code plugin · v0.9.7</span>
     <h1>One setup step.<br><span class="accent">A shared way of building.</span></h1>
-    <p>Install the plugin, run one command per project, and every repo gets the same guardrails, the same quality checks and the same workflow for bigger changes.</p>
+    <p>Install the kit (see <code>SETUP.md</code>), run one command per project, and every repo gets the same guardrails, the same quality checks and the same workflow for bigger changes.</p>
   </header>
 
   <section>
@@ -297,7 +297,8 @@
     </div>
     <p class="note"><b>Demo vs prod:</b> demo means fast work on main and checks that only warn; prod means a branch is required and checks block.</p>
     <p class="note"><b>Safe to run:</b> setup backs up the repo's Claude Code files first and prints a restore command. Step 7 (repo-setup) applies its findings without asking: rules for some files only, procedures as skills, "never" as deny rules, personal notes to <code>CLAUDE.local.md</code>.</p>
-    <p class="note">Install once: <code>/plugin marketplace add &lt;git URL&gt;</code>, then <code>/plugin install invent-agentic-kit@invent-agentic-kit</code>. Update: <code>/plugin marketplace update invent-agentic-kit</code>.</p>
+    <p class="note"><b>Install once per machine, no marketplace needed:</b> plugin marketplaces are hard to use at Invent, so start Claude Code in your project and ask it to <code>Follow &lt;kit folder&gt;/SETUP.md</code>. It copies the skills, hooks and review agent into your <code>~/.claude/</code> and starts <code>/agentic-kit-setup</code>. To update, follow <code>SETUP.md</code> again.</p>
+    <p class="note">Or as a plugin: <code>/plugin marketplace add &lt;git URL&gt;</code>, then <code>/plugin install invent-agentic-kit@invent-agentic-kit</code>. Update: <code>/plugin marketplace update invent-agentic-kit</code>. Use one of the two ways, not both.</p>
   </section>
 
   <section>
@@ -315,7 +316,7 @@
     <div class="flow">
       <div class="flow-box"><div class="n">1</div><div class="t">Grill it</div><div class="d">Claude asks until the approach is clear</div></div>
       <div class="arrow" aria-hidden="true">→</div>
-      <div class="flow-box"><div class="n">2</div><div class="t">Plan it</div><div class="d">plans/&lt;branch&gt;.md, a test per criterion</div></div>
+      <div class="flow-box"><div class="n">2</div><div class="t">Plan it</div><div class="d">Grilling results in plans/&lt;branch&gt;.md, a test per criterion</div></div>
       <div class="arrow" aria-hidden="true">→</div>
       <div class="flow-box you"><div class="n">3</div><div class="t">Approve it</div><div class="d">You OK the plan before code</div></div>
       <div class="arrow" aria-hidden="true">→</div>
@@ -355,7 +356,7 @@
   </section>
 
   <footer>
-    invent-agentic-kit <span class="v">v0.9.6</span> · Details and reasoning in README.md.
+    invent-agentic-kit <span class="v">v0.9.7</span> · Details and reasoning in README.md.
   </footer>
 
 </div>

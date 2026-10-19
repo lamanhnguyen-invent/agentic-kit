@@ -7,6 +7,9 @@ moves instructions out of an overgrown `CLAUDE.md` into rules, skills, hooks
 or permissions, a suggested workflow for bigger tickets, and a review agent
 that checks the result against the ticket.
 
+**Install:** no plugin marketplace needed. Start Claude Code in your project
+and ask it to `Follow <path to this folder>/SETUP.md` (see [Setup](#setup)).
+
 ## What it does
 
 ### 1. Guided setup — `/agentic-kit-setup`
@@ -26,7 +29,7 @@ a file silently, except in step 7:
 3. **Project CLAUDE.md** — adds the Invent project guidelines: the ticket
    workflow below and a summary of the hooks in use, worded for the repo
    type. Updates an older version of the block if it finds one (the block has
-   its own version, v0.6, which changes only when its text does, so a kit
+   its own version, v0.7, which changes only when its text does, so a kit
    update alone never asks you to replace it). In a repo
    without a `CLAUDE.md` it starts Claude Code's built-in `/init` first; next
    to an `AGENTS.md` it imports it with `@AGENTS.md` instead (Claude Code
@@ -171,6 +174,14 @@ Our changes are marked `invent patch:` in the scripts and covered by
   forms, and block if any matches: as written, with `\⏎` line continuations
   joined (`r\⏎m -rf /`), with comments stripped, and with command words in
   lower case (`RM -rf /`, `GIT reset --hard`; macOS and Windows run them).
+- `block-dangerous-commands` and `git-safety` skip a heredoc body that goes
+  to a plain data sink (`cat > CLAUDE.md <<'EOF'`, `tee`, `git commit -F -`,
+  `git commit -m "$(cat <<'EOF' …)"`, `gh … --body-file -`), so a file or
+  commit message may mention `gh release delete` or `rm -rf /`. Every other
+  heredoc is still checked (`bash <<EOF`, `python - <<EOF`), and so is every
+  body when the command runs a shell, script or interpreter anywhere
+  (`| sh`, `bash x.sh`, `./x.sh`, `source`, `python`, …). A mention inside
+  `-m "…"` or an `echo` string is still blocked.
 - `git-safety` only treats `main`/`master` as protected when it is the whole
   ref, so `git push origin feature/main-page` is allowed; reads the branch
   from the session's working directory (or the `git -C` one); has the
@@ -225,16 +236,22 @@ It pays off most when you don't know the codebase yet: the grilling step makes
 Claude dig through the code and docs and ask you questions, which is a fast way
 to understand how things fit together before anything changes.
 
-If you already know what you want to do and where, skip the loop: tell Claude
-your plan directly — `ponytail` is active anyway. Anthropic's rule of thumb:
-if you could describe the diff in one sentence, skip the plan.
+Small tasks skip the loop, and small is the default: Claude decides whether
+a task is small or big, and asks when it's unsure. Bug
+fixes with a known cause, changes whose files are clear, config, tests and
+follow-ups are small. Big means open requirements, a public API, data model
+or schema change, or several modules. You can always override it, also
+mid-workflow: "just do it" is enough.
 
 1. **Grill it** — `/grill-with-docs` stress-tests the approach and writes
    resolved terms to `GLOSSARY.md` and decisions to ADRs as you go.
-2. **Plan it** — Claude writes `plans/<branch>.md` (branch name without its
-   prefix: `feature/PROJ-123-login` → `plans/PROJ-123-login.md`): goal,
-   acceptance criteria (each with the test that proves it), steps, out of
-   scope — stripped to the simplest version with `ponytail`.
+2. **Plan it** — not a new planning session: Claude writes down what the
+   grilling settled in `plans/<branch>.md` (branch name without its prefix:
+   `feature/PROJ-123-login` → `plans/PROJ-123-login.md`). For you and
+   reviewers: goal, decisions (each question with its answer and why),
+   acceptance criteria (each with the test that proves it), out of scope.
+   For the implementing agent: files to change and to read first, steps,
+   and code sketches for tricky steps.
 3. **Approve it** — you read (and may edit) the plan file before any code is
    written.
 4. **Implement it** — on a feature branch (optional in demo repos);
@@ -290,6 +307,26 @@ proposes changes):
 | `/skill-doctor` | What each installed skill costs in context and how often it's used |
 
 ## Setup
+
+### Without the plugin marketplace (usual at Invent)
+
+Plugin marketplaces are hard to use at Invent, so the kit can also be
+installed as plain files in your personal `~/.claude/` folder. Get a copy of
+this folder, start Claude Code in your project and ask:
+
+```
+Follow <path to this folder>/SETUP.md
+```
+
+Claude copies the skills, the hooks and the `pr-review` agent into
+`~/.claude/`, registers the hooks in `~/.claude/settings.json` (it shows the
+change first) and starts `/agentic-kit-setup`. Same-named skills you already
+have are only replaced if you agree, and they're backed up first. Do this
+once per machine; other projects only need `/agentic-kit-setup`. To update,
+get the new kit version and follow `SETUP.md` again. Don't install the plugin
+as well, or every hook runs twice.
+
+### As a plugin
 
 In Claude Code, add the kit as a plugin marketplace and install it — from a
 local copy or from the git repo:

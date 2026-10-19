@@ -2,6 +2,7 @@
 name: agentic-kit-setup
 description: Walk the user through onboarding their personal and project CLAUDE.md files with Invent's agentic-coding guidelines and workflow, the repo type (demo or prod), the project's secret-file deny rules, its pre-commit quality gate, and an optional personal statusline and notification. Backs the repo's Claude Code files up first and ends by running repo-setup, which moves instructions into rules, skills, hooks or permissions. Use when the user runs /agentic-kit-setup or asks to set up Invent's Claude Code conventions.
 # Any path to backup.js: the plugin path may contain a space and get quoted, and on Windows Claude may run it via PowerShell.
+# CLAUDE_SKILL_DIR, not CLAUDE_PLUGIN_ROOT: the kit also installs as plain copies in ~/.claude (SETUP.md).
 allowed-tools: Bash(node *repo-setup/scripts/backup.js*) PowerShell(node *repo-setup/scripts/backup.js*)
 ---
 
@@ -31,7 +32,7 @@ Never back up `.claude/settings.local.json`, `.mcp.json` or `.env` files.
 - If none exist: say there is nothing to back up and go to Step 1.
 - Otherwise back them up without asking:
 
-      node "${CLAUDE_PLUGIN_ROOT}/skills/repo-setup/scripts/backup.js" save .repo-setup-backup <file> <file> ...
+      node "${CLAUDE_SKILL_DIR}/../repo-setup/scripts/backup.js" save .repo-setup-backup <file> <file> ...
 
   Show the script's output and remember the restore command it prints for
   Step 8. If the script fails, stop.
@@ -116,37 +117,63 @@ Claude Code reads `AGENTS.md` only while the project has no `CLAUDE.md`, so a
    - **`CLAUDE.md` exists:** read it and use your judgment to check whether it
      already has an "Invent Project Guidelines" section (substance, not
      exact title).
-     - If present, marked v0.6, stating the same repo type, and mentioning
+     - If present, marked v0.7, stating the same repo type, and mentioning
        pre-commit only if Step 5 applies to this repo: tell the user it's
        already set up, move to Step 4.
-     - If present but older (v0.5, v0.4, v0.3, v0.2, v0.1 or unversioned), stating the
+     - If present but older (v0.6, v0.5, v0.4, v0.3, v0.2, v0.1 or unversioned), stating the
        other repo type, or differing on pre-commit: show the diff to the
        block below and ask whether to replace the old section with it.
      - If missing: show the block below and ask whether to append it.
 
-Invent baseline block (v0.6). It is written for **prod**; for a **demo** repo,
+Invent baseline block (v0.7). It is written for **prod**; for a **demo** repo,
 swap in the demo lines listed after it.
 
-    ## Invent Project Guidelines (v0.6)
+    ## Invent Project Guidelines (v0.7)
 
     Repo type: **prod** (`INVENT_REPO_TYPE` in `.claude/settings.json`; don't
     change it yourself).
 
-    Suggested workflow for bigger changes or tickets. It is not enforced; if
-    the diff can be described in one sentence, skip it. It pays off most in
-    code you don't know yet.
+    ### Small or big?
+
+    Size every coding task before you start. Don't announce the size; just
+    act on it.
+
+    - **Small (the default):** just do it, no workflow. Bug fix with a known
+      cause, a change whose files you can name, config, copy, tests,
+      dependency bumps, refactors inside one module, follow-ups in the same
+      session, even if several files change.
+    - **Big:** only if at least one applies: new behaviour with open
+      requirements or design choices; changes a public API, data model,
+      schema or migration; spans several modules or services; or the user
+      asks for the workflow.
+    - **Unsure:** ask once via AskUserQuestion ("Small: just do it" first,
+      "Big: grill and write a plan" second). Don't start the workflow
+      without a yes.
+
+    The user can override your call at any point, also mid-workflow. Infer
+    their intent rather than waiting for exact words: "just do it", "skip
+    the plan" or "quick fix" mean small; "let's grill this" or "write a
+    plan" mean big. Follow it without arguing for the workflow; name a real
+    risk once at most.
+
+    ### Workflow for big tasks
+
+    Suggested, not enforced. It pays off most in code you don't know yet.
 
     1. **Grill it** — stress-test the approach against the code and existing
        docs: ask the user to run `/grill-with-docs` (only the user can start
        it), or invoke the `grilling` and `domain-modeling` skills yourself.
        Put each round of questions into AskUserQuestion (max 4 per call,
        recommended answer as first option).
-    2. **Plan it** — create the feature branch, then write the plan to
-       `plans/<branch name without prefix>.md` (`feature/PROJ-123-login` →
-       `plans/PROJ-123-login.md`) using the template below. Every acceptance
-       criterion names the test or command that proves it. Then apply
-       `ponytail` to the plan to strip it to the simplest version that meets
-       the criteria.
+    2. **Plan it** — this is not a planning session: don't enter plan mode
+       or explore the code again. Simply write an implementation plan or
+       report of what was discussed so far. Create the feature branch, then
+       write it to `plans/<branch name without prefix>.md`
+       (`feature/PROJ-123-login` → `plans/PROJ-123-login.md`) using the
+       template below. If the template needs something the grilling never
+       settled, ask via AskUserQuestion rather than guess. Every acceptance
+       criterion names the test or command that proves it. Keep the plan to
+       the simplest version that meets the criteria (`ponytail`).
     3. **Approve it** — point the user to the plan file and wait for their
        approval before writing code. They may edit the file directly.
     4. **Implement it** — on the feature branch, never on main/master.
@@ -163,23 +190,39 @@ swap in the demo lines listed after it.
 
     Commit the plan file with the change, so reviewers see what was asked.
 
-    Plan template:
+    Plan template. The plan is the one shared document for the user,
+    reviewers and implementing agents: as long as the work needs, but it
+    records decisions and results, not the conversation.
 
         # <ticket id> <title>
 
         ## Goal
-        One sentence: what and why.
+        One or two sentences: what changes and why.
+
+        ## Decisions
+        What the grilling settled, one line per question.
+        - **Q1 <question>** → <answer>. Why: <reason; rejected option>
 
         ## Acceptance criteria
-        - [ ] <observable behaviour> — Test: <test name or command>
-
-        ## Steps
-        1. ...
+        - [ ] AC1 <observable behaviour> — Test: <new|existing> `<test or command>`
 
         ## Out of scope
-        - ...
+        - <raised during grilling, left out, and why>
 
-    ### Invent tooling (v0.6)
+        ## Implementation
+        For the implementing agent: follow this CLAUDE.md, the `ponytail`
+        skill and the project's `AGENTS.md` if there is one.
+
+        Files:
+        - `<path>`: <new | change | delete>, <what>
+        - Read first: `<path>`, <why it matters>
+
+        Steps:
+        1. <change>, files: `<path>`, proves: AC1
+           Only for a tricky step: a short code sketch (signature, key
+           logic, edge case). It is guidance; check it against the code.
+
+    ### Invent tooling (v0.7)
 
     - **Pre-tool-use hooks (active):** `protect-secrets` (Read/Edit/Write/Grep/
       Bash/PowerShell), `block-dangerous-commands` and `git-safety`
@@ -202,11 +245,11 @@ swap in the demo lines listed after it.
 Demo variant: replace these parts of the block, keep everything else.
 
 - In the repo-type line, `**prod**` → `**demo**`.
-- The first sentence of "Plan it" →
+- In "Plan it", the sentence starting "Create the feature branch" →
 
-      2. **Plan it** — a feature branch is optional in this demo repo. Write
-         the plan to `plans/<branch name without prefix>.md`, or on main to
-         `plans/<short-topic>.md`, using the template below.
+      A feature branch is optional in this demo repo. Write it to
+      `plans/<branch name without prefix>.md`, or on main to
+      `plans/<short-topic>.md`, using the template below.
 
 - The first sentence of "Implement it" →
 
@@ -462,7 +505,7 @@ First check what is already there, before asking anything:
   `statusLine.command` runs `invent-kit/statusline.js`; the notification if
   a `hooks.Stop` entry runs `invent-kit/notify.js`.
 - For each one that is set up, compare `~/.claude/invent-kit/<script>` with
-  `${CLAUDE_PLUGIN_ROOT}/extras/<script>`, ignoring line endings
+  `${CLAUDE_SKILL_DIR}/../../extras/<script>`, ignoring line endings
   (e.g. `git diff --no-index --ignore-cr-at-eol --quiet <a> <b>`).
 
 Then:
@@ -481,7 +524,7 @@ Then:
   your turn" whenever Claude stops. Useful with several sessions in parallel;
   noisy if you watch Claude work anyway.
 
-1. Copy the chosen scripts from `${CLAUDE_PLUGIN_ROOT}/extras/` (`statusline.js`,
+1. Copy the chosen scripts from `${CLAUDE_SKILL_DIR}/../../extras/` (`statusline.js`,
    `notify.js`) to `~/.claude/invent-kit/`. They are copied because the plugin
    folder moves on every update. Only copy what the user agreed to above.
 2. Read `~/.claude/settings.json` (create it with `{}` if missing) and show the

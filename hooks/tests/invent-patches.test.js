@@ -256,6 +256,43 @@ describe('ponytail-activate', () => {
   });
 });
 
+describe('block-dangerous-commands + git-safety: a heredoc body sent to a data sink is no command', () => {
+  const blocked = (c) => bd.checkCommand(c).blocked || gs.checkCommand(c, 'feature/x', undefined, { repoType: 'prod' }).blocked;
+  for (const c of [
+    "cat >> CLAUDE.md <<'EOF'\nIt blocks `gh repo delete` / `gh release delete`.\nEOF",
+    "cat > notes.md <<'EOF'\nnever run git reset --hard or rm -rf /\nEOF",
+    "cat <<EOF > docs/safety.md\nrm -rf ~ is blocked\nEOF",
+    "tee docs/x.md <<'EOF'\ngit push --force origin main\nEOF",
+    "git commit -F - <<'EOF'\nfeat: chat history\n\nAvoid git push --force on main.\nEOF",
+    'git commit -m "$(cat <<\'EOF\'\nfix: explain why gh release delete is blocked\nEOF\n)"',
+    "gh pr create --title x --body-file - <<'EOF'\nNo more rm -rf / false positives.\nEOF",
+  ]) {
+    it(`allows ${JSON.stringify(c)}`, () => assert.strictEqual(blocked(c), false));
+  }
+  for (const c of [
+    "bash <<'EOF'\nrm -rf /\nEOF",
+    'cat <<EOF | sh\nrm -rf ~\nEOF',
+    "cat > x.sh <<'EOF'\nrm -rf /\nEOF\nbash x.sh",
+    "cat > x.sh <<'EOF'\nrm -rf /\nEOF\nchmod +x x.sh && ./x.sh",
+    "python - <<'EOF'\nimport os; os.system('rm -rf /')\nEOF",
+    "cat <<'EOF' | python3\nimport os; os.system('rm -rf ~')\nEOF",
+    "source <(cat <<'EOF'\nrm -rf /\nEOF\n)",
+    'cat <<EOF\n$(rm -rf /)\nEOF',
+    "cat > x <<'EOF'\nhi\nEOF\nrm -rf /",
+    "cat > x <<'EOF'\nhi\nEOF\ngit reset --hard",
+    "cat > x <<'EOF'\nhi\nEOF\ngh release delete v1",
+    "cat <<'EOF' | gh repo delete x\nEOF",
+  ]) {
+    it(`blocks ${JSON.stringify(c)}`, () => assert.strictEqual(blocked(c), true));
+  }
+  it('answers fast on a long heredoc', () => {
+    const c = "cat > x <<'EOF'\n" + 'rm -rf / '.repeat(3000) + '\nEOF';
+    const start = Date.now();
+    blocked(c);
+    assert.ok(Date.now() - start < 500);
+  });
+});
+
 describe('protect-secrets: text that only mentions a secret file is no read', () => {
   for (const c of [
     "python - <<'EOF'\nprint('the repo type for the hooks. .env git-ignored')\nEOF",

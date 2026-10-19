@@ -138,9 +138,30 @@ function variants(cmd) {
   return [...new Set(shellForms(cmd).flatMap((c) => [c, lowerWords(c)]))];
 }
 
+// invent patch: a heredoc body is data, not commands, when it goes to a plain
+// data sink (`cat > CLAUDE.md <<'EOF'`, `tee`, `git commit -F -`,
+// `git commit -m "$(cat <<'EOF' …)"`, `gh … --body-file -`), so the body may
+// mention `rm -rf /`. Every other heredoc stays (`bash <<EOF`,
+// `python - <<EOF`), and so do all bodies when the command runs a shell, a
+// script or an interpreter anywhere (`| sh`, `bash x.sh`, `./x.sh`, `source`,
+// `eval`, `xargs`, `python`, `node`): then a body may be what runs. An
+// unquoted delimiter still runs `$(…)` and backticks in the body, so those
+// stay. protect-secrets has a looser form of this rule.
+const HEREDOC = /^(.*?<<-?[ \t]*)(['"]?)([A-Za-z_]\w*)\2(.*)\n([\s\S]*?)\n[ \t]*\3[ \t]*(?=\n|$)/gm;
+const DATA_SINK = /(?:^|[\s;&|(`])(?:cat|tee|git|gh)\b[^;&|\n]*$/i;
+const RUNS_CODE = /\b(?:ba|z|da|k)?sh\b|\b(?:pwsh|powershell|source|eval|exec|xargs|python\d*(?:\.\d+)?|py|node|deno|bun|perl|ruby|php|osascript)\b|\.(?:sh|ps1)\b|(?:^|[\s;&|(])\.{1,2}\//i;
+function dropHeredocBodies(cmd) {
+  if (!cmd.includes('<<') || RUNS_CODE.test(cmd.replace(HEREDOC, '$1$4'))) return cmd;
+  return cmd.replace(HEREDOC, (all, head, quote, tag, rest, body) => {
+    if (!DATA_SINK.test(head.replace(/<<-?[ \t]*$/, ''))) return all;
+    const subst = quote ? [] : body.match(/\$\([^)\n]*\)|`[^`\n]*`/g) || [];
+    return [head + tag + rest, ...subst, tag].join('\n');
+  });
+}
+
 function checkCommand(cmd, safetyLevel = SAFETY_LEVEL) {
   const threshold = LEVELS[safetyLevel] || 2;
-  const forms = variants(cmd);
+  const forms = variants(dropHeredocBodies(String(cmd || '')));
   for (const p of PATTERNS) {
     if (LEVELS[p.level] <= threshold && forms.some((c) => p.regex.test(c))) {
       return { blocked: true, pattern: p };
