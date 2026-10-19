@@ -7,6 +7,9 @@ moves instructions out of an overgrown `CLAUDE.md` into rules, skills, hooks
 or permissions, a suggested workflow for bigger tickets, and a review agent
 that checks the result against the ticket.
 
+**Install:** no plugin marketplace needed. Start Claude Code in your project
+and ask it to `Follow <path to this folder>/SETUP.md` (see [Setup](#setup)).
+
 ## What it does
 
 ### 1. Guided setup — `/agentic-kit-setup`
@@ -26,7 +29,7 @@ a file silently, except in step 7:
 3. **Project CLAUDE.md** — adds the Invent project guidelines: the ticket
    workflow below and a summary of the hooks in use, worded for the repo
    type. Updates an older version of the block if it finds one (the block has
-   its own version, v0.6, which changes only when its text does, so a kit
+   its own version, v0.8, which changes only when its text does, so a kit
    update alone never asks you to replace it). In a repo
    without a `CLAUDE.md` it starts Claude Code's built-in `/init` first; next
    to an `AGENTS.md` it imports it with `@AGENTS.md` instead (Claude Code
@@ -57,10 +60,11 @@ one puts back every file that existed before the setup, as it was then.
 Files the setup created, and changes to `.gitignore` and `~/.claude`, stay
 in place. Step 7 never adds back what you declined earlier in the setup.
 
-Step 5 only runs for Python projects in a git repo (`.py` files anywhere in
-the repo count). The pre-commit checks cover Python files only; there are no
-checks for JS/TS or other languages (Prettier, ESLint, …) yet. In other repos
-the guidelines block from step 3 leaves the pre-commit part out.
+Step 5 only runs for Python or JS/TS projects in a git repo (`.py` files
+anywhere in the repo, or a `package.json` at its root). The pre-commit checks
+cover Python, JS and TS files; there are no checks for other languages yet.
+In other repos the guidelines block from step 3 leaves the pre-commit part
+out.
 
 **Statusline and notification.** Step 6 copies `extras/statusline.js` and
 `extras/notify.js` to `~/.claude/invent-kit/` and points your personal
@@ -107,6 +111,8 @@ other value means prod.
 | commit, merge, rebase, reset, push while on main/master | blocked | allowed |
 | `git push origin main` from another branch | blocked | allowed |
 | `gh pr merge`, `gh pr close`, `gh issue close` | blocked | allowed |
+| bulk staging: `git add .`, `-A`, `--all`, `:/`, `*` (by name and `git add -u` are fine) | blocked | allowed |
+| `git commit` on a feature branch | asks you first | allowed |
 | deleting main/master, locally or on the remote (`git push origin --delete main`, `:main`) | blocked | blocked |
 | force-pushing main/master (`--force`/`-f`/`--force-with-lease`, `+main`, or any force-push while on main) | blocked | blocked |
 | `gh repo delete`, `gh release delete` | blocked | blocked |
@@ -199,10 +205,21 @@ stop shell commands (a test let `head -1 .env` through); the
 opens files itself (`python -c ...`) is covered by neither, which needs
 Claude Code's sandbox.
 
+Deny rules and hooks both have to let a call through, and no hook can lift a
+deny rule. A deny rule on `git` or `gh` (`Bash(git push * main)`) therefore
+holds in demo repos too and overrides the repo type. So the kit keeps git
+rules in `git-safety` only: setup step 4 lists such deny rules (project,
+`settings.local.json`, `~/.claude/settings.json`) and offers to remove the
+project's. `/repo-setup` never turns a git instruction into a deny rule: it
+deletes a `CLAUDE.md` line the hooks already cover ("never push to main") and
+leaves the others in place.
+
 **Pre-commit hooks** are written into the project's `.pre-commit-config.yaml`
 by setup step 5. They run on every `git commit`, whoever makes the commit —
-Claude or a person. They check **Python files only**: a commit without `.py`
-files passes them untouched, and other languages (JS/TS, …) aren't checked yet.
+Claude or a person. They check **Python and JS/TS files**: a commit without
+such files passes them untouched, and other languages aren't checked yet.
+
+Python:
 
 | Hook | Demo repo | Prod repo | Runs from |
 |---|---|---|---|
@@ -212,13 +229,24 @@ files passes them untouched, and other languages (JS/TS, …) aren't checked yet
 | `ruff-format` — formatting | Formats | Formats | pre-commit's own environment |
 | `ty` — type checker *(optional)* | Lists type errors | Blocks on type errors | project venv (dev dependency), via `uv run --no-sync` so commits never rewrite `uv.lock` |
 
+JS/TS:
+
+| Hook | Demo repo | Prod repo | Runs from |
+|---|---|---|---|
+| `eslint` — lint and complexity | Lists findings and functions with complexity ≥ 11 | Blocks on errors and functions with complexity ≥ 21 | `node_modules` (dev dependency), via `npx --no-install` |
+| `prettier` — formatting | Formats | Formats | `node_modules` (dev dependency) |
+| `tsc` — type checker *(optional, TypeScript)* | Lists type errors | Blocks on type errors | `node_modules` (dev dependency) |
+
 Demo repos get advisory checks: findings are shown, but the commit goes
-through, so a one-off demo isn't slowed down. The one exception is
-`ruff-format`: when it reformats a file, the commit stops once — add the file
-and commit again. Prod repos get blocking checks. The thresholds and how to
-change them are explained in comments in the generated
-`.pre-commit-config.yaml`. `ty` is only added if you choose it during setup,
-because it must be installed in the project's venv to see its dependencies.
+through, so a one-off demo isn't slowed down. The one exception is the
+formatter (`ruff-format`, `prettier`): when it reformats a file, the commit
+stops once — add the file and commit again. Prod repos get blocking checks.
+The thresholds and how to change them are explained in comments in the
+generated `.pre-commit-config.yaml`. `ty` is only added if you choose it
+during setup, because it must be installed in the project's venv to see its
+dependencies. The JS/TS hooks use the project's own ESLint and Prettier
+config; setup offers a minimal `eslint.config.mjs` if there is none. Everyone
+who commits needs `npm install` (or the equivalent) done first.
 
 Each tool has one job: radon/xenon measure complexity, ruff lints and
 formats, ty checks types. ruff's own complexity rule (C901) stays off so
@@ -233,16 +261,22 @@ It pays off most when you don't know the codebase yet: the grilling step makes
 Claude dig through the code and docs and ask you questions, which is a fast way
 to understand how things fit together before anything changes.
 
-If you already know what you want to do and where, skip the loop: tell Claude
-your plan directly — `ponytail` is active anyway. Anthropic's rule of thumb:
-if you could describe the diff in one sentence, skip the plan.
+Small tasks skip the loop, and small is the default: Claude decides whether
+a task is small or big, and asks when it's unsure. Bug
+fixes with a known cause, changes whose files are clear, config, tests and
+follow-ups are small. Big means open requirements, a public API, data model
+or schema change, or several modules. You can always override it, also
+mid-workflow: "just do it" is enough.
 
 1. **Grill it** — `/grill-with-docs` stress-tests the approach and writes
    resolved terms to `GLOSSARY.md` and decisions to ADRs as you go.
-2. **Plan it** — Claude writes `plans/<branch>.md` (branch name without its
-   prefix: `feature/PROJ-123-login` → `plans/PROJ-123-login.md`): goal,
-   acceptance criteria (each with the test that proves it), steps, out of
-   scope — stripped to the simplest version with `ponytail`.
+2. **Plan it** — not a new planning session: Claude writes down what the
+   grilling settled in `plans/<branch>.md` (branch name without its prefix:
+   `feature/PROJ-123-login` → `plans/PROJ-123-login.md`). For you and
+   reviewers: goal, decisions (each question with its answer and why),
+   acceptance criteria (each with the test that proves it), out of scope.
+   For the implementing agent: files to change and to read first, steps,
+   and code sketches for tricky steps.
 3. **Approve it** — you read (and may edit) the plan file before any code is
    written.
 4. **Implement it** — on a feature branch (optional in demo repos);
@@ -299,6 +333,26 @@ proposes changes):
 
 ## Setup
 
+### Without the plugin marketplace (usual at Invent)
+
+Plugin marketplaces are hard to use at Invent, so the kit can also be
+installed as plain files in your personal `~/.claude/` folder. Get a copy of
+this folder, start Claude Code in your project and ask:
+
+```
+Follow <path to this folder>/SETUP.md
+```
+
+Claude copies the skills, the hooks and the `pr-review` agent into
+`~/.claude/`, registers the hooks in `~/.claude/settings.json` (it shows the
+change first) and starts `/agentic-kit-setup`. Same-named skills you already
+have are only replaced if you agree, and they're backed up first. Do this
+once per machine; other projects only need `/agentic-kit-setup`. To update,
+get the new kit version and follow `SETUP.md` again. Don't install the plugin
+as well, or every hook runs twice.
+
+### As a plugin
+
 In Claude Code, add the kit as a plugin marketplace and install it — from a
 local copy or from the git repo:
 
@@ -316,10 +370,15 @@ To see or disable the hooks: `/hooks`, or turn the plugin off in `/plugin`.
 
 - **Node.js ≥ 18** — all Claude Code hooks are Node scripts. Claude Code
   itself runs without Node, but then every guard of the kit silently stays
-  off; setup checks for Node first.
+  off; setup checks for Node first. Install it from the pre-approved
+  software in the Company Portal.
 - **git** — for `git-safety` and the pre-commit hooks.
 - **Python projects:** a project venv managed by `uv`, `poetry` or pip, plus
   `pre-commit`. Setup offers to install `pre-commit` and `ty` if they're
+  missing.
+- **JS/TS projects:** `pre-commit` (a Python tool, e.g. via
+  `uv tool install pre-commit`) and ESLint 9+, Prettier and, for tsc,
+  TypeScript as dev dependencies. Setup offers to install them if they're
   missing.
 - **Behind a company proxy:** if `uv` fails with `invalid peer certificate`,
   set `UV_SYSTEM_CERTS=1` so it trusts the system certificate store.

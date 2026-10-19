@@ -56,7 +56,7 @@ describe('SKILL.md', () => {
 
 describe('agentic-kit-setup', () => {
   const kit = fs.readFileSync(path.join(SKILL_DIR, '../agentic-kit-setup/SKILL.md'), 'utf8');
-  const command = 'node "${CLAUDE_PLUGIN_ROOT}/skills/repo-setup/scripts/backup.js"';
+  const command = 'node "${CLAUDE_SKILL_DIR}/../repo-setup/scripts/backup.js"';
 
   it('backs up with the pre-approved repo-setup script, in Bash and PowerShell', () => {
     assert.ok(kit.includes(`${command} save `));

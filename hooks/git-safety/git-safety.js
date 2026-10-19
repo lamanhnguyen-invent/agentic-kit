@@ -22,7 +22,8 @@
  * invent patch: repo type via INVENT_REPO_TYPE ('demo' | 'prod', default and
  * fallback 'prod'). Demo repos may commit, merge, rebase, reset and push on
  * main and merge/close PRs and issues; deleting main (local or remote),
- * force-pushing to main and gh repo/release deletion stay blocked. Wired by invent-agentic-kit's hooks/hooks.json;
+ * force-pushing to main and gh repo/release deletion stay blocked. Prod repos
+ * also block bulk staging (`git add .`/`-A`) and ask before every commit. Wired by invent-agentic-kit's hooks/hooks.json;
  * configure via "env" in .claude/settings.json, see the kit's README.
  */
 
@@ -40,6 +41,7 @@ const REPO_TYPE = process.env.INVENT_REPO_TYPE === 'demo' ? 'demo' : 'prod';
 const DEMO_ALLOWED = new Set([
   'commit-on-protected', 'merge-on-protected', 'rebase-on-protected', 'reset-on-protected',
   'push-on-protected', 'push-main', 'push-master', 'gh-pr-merge', 'gh-pr-close', 'gh-issue-close',
+  'add-all', 'commit-ask',
 ]);
 
 const PROTECTED_BRANCHES = ['main', 'master'];
@@ -89,6 +91,12 @@ const PATTERNS = [
   { level: 'high', id: 'gh-issue-close',            regex: /\bgh\s+issue\s+close\b/,                          reason: 'Closing issues via gh CLI is not allowed' },
   { level: 'high', id: 'gh-release-delete',         regex: /\bgh\s+release\s+delete\b/,                       reason: 'Deleting releases via gh CLI is not allowed' },
   { level: 'high', id: 'gh-repo-delete',            regex: /\bgh\s+repo\s+delete\b/,                          reason: 'Deleting repos via gh CLI is not allowed' },
+
+  // invent patch: prod repos stage by name, so local working files never slip
+  // into a commit (`git add .`, `-A`, `--all`, `:/`, `*`); `git add -u` is fine
+  { level: 'high', id: 'add-all',                   regex: git(String.raw`(?:add|stage)\b[^;&|]*\s["']?(?:\.|-[a-zA-Z]*A[a-zA-Z]*|--all|:\/|\*)["']?(?=\s|$|[;&|])`), reason: 'Not allowed in this prod repo: `git add .`/`-A` also picks up local working files. Stage files by name (`git add <file>`) or with `git add -u`' },
+  // invent patch: prod repos ask before every commit, last so a block wins
+  { level: 'high', id: 'commit-ask',                regex: git(String.raw`commit\b`),                         reason: 'Claude may not commit on its own in this prod repo, so every commit needs your confirmation here. Confirm only if it is the commit you approved (files and message)', ask: true },
 ];
 
 const LEVELS = { critical: 1, high: 2, strict: 3 };
@@ -183,6 +191,7 @@ function checkCommand(cmd, branch = null, safetyLevel = SAFETY_LEVEL, { repoType
     }
 
     const reason = p.reason.replace('{branch}', branch || '');
+    if (p.ask) return { blocked: false, ask: true, pattern: p, reason }; // invent patch: ask, don't block
     return { blocked: true, pattern: p, reason };
   }
 
@@ -209,6 +218,18 @@ async function main() {
           hookEventName: 'PreToolUse',
           permissionDecision: 'deny',
           permissionDecisionReason: `${EMOJIS[p.level]} [${p.id}] ${result.reason}`
+        }
+      }));
+    }
+
+    if (result.ask) {
+      const p = result.pattern;
+      log({ level: 'ASK', id: p.id, priority: p.level, repo_type: REPO_TYPE, cmd, session_id, cwd, permission_mode });
+      return console.log(JSON.stringify({
+        hookSpecificOutput: {
+          hookEventName: 'PreToolUse',
+          permissionDecision: 'ask',
+          permissionDecisionReason: `[${p.id}] ${result.reason}`
         }
       }));
     }
