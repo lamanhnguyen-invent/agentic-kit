@@ -19,9 +19,8 @@ question at a time via AskUserQuestion.
 
 1. Run `node --version`. The kit's hooks are Node scripts; without Node 18
    or newer they fail silently. If it is missing or older, tell the user to
-   install it from the pre-approved software in the Company Portal (an older
-   version first has to be uninstalled there), restart Claude Code and start
-   again, and stop.
+   install it (https://nodejs.org), restart Claude Code and start again,
+   and stop.
 2. Read `~/.claude/settings.json`. If `enabledPlugins` has an
    `invent-agentic-kit@…` entry set to `true`, the plugin is installed:
    with the copies as well, every hook would run twice. Tell the user to
@@ -37,7 +36,7 @@ Leave out every `tests/` folder.
 |---|---|---|
 | `skills/*/` (all six skill folders, with their files and `scripts/`) | `skills/` | `/agentic-kit-setup`, `/grill-with-docs`, `grilling`, `domain-modeling`, `ponytail`, `repo-setup` |
 | `agents/pr-review.md` | `agents/` | the review agent |
-| `hooks/<name>/<name>.js` for `protect-secrets`, `block-dangerous-commands`, `git-safety`, `ponytail-activate` | `hooks/<name>/` | the hook scripts; `ponytail-activate` reads `~/.claude/skills/ponytail/SKILL.md` |
+| `hooks/<name>/<name>.js` for `protect-secrets`, `block-dangerous-commands`, `git-safety`, `ponytail-activate`, `ruff-format` | `hooks/<name>/` | the hook scripts; `ponytail-activate` reads `~/.claude/skills/ponytail/SKILL.md` |
 | `extras/statusline.js`, `extras/notify.js` | `extras/` | `/agentic-kit-setup` Step 6 copies them from here if the user wants them |
 
 Don't copy `.claude-plugin/`, `hooks/hooks.json`, `plans/`, the docs or any

@@ -16,9 +16,8 @@ exception is Step 7, which the backups cover.
 First run `node --version`. The kit's hooks are Node scripts, and without
 Node they fail silently, so none of its guards would run. If the command
 fails or prints a version below 18, tell the user to install Node.js 18 or
-newer from the pre-approved software in the Company Portal (an older version
-first has to be uninstalled there), restart Claude Code and run
-`/agentic-kit-setup` again, and stop.
+newer (https://nodejs.org), restart Claude Code and run `/agentic-kit-setup`
+again, and stop.
 
 Then find, with Glob, the files this setup may change:
 
@@ -83,8 +82,7 @@ for every repo, not only Python ones.
      Pre-commit checks are advisory.
    - **Prod** — code that will be maintained. `git-safety` blocks commits,
      merges, rebases, resets and pushes on main/master, and merging or
-     closing PRs and issues via `gh`; it blocks `git add .`/`-A` and asks
-     the user before every commit. Pre-commit checks are blocking.
+     closing PRs and issues via `gh`. Pre-commit checks are blocking.
    In both, `block-dangerous-commands` keeps blocking `git reset --hard`
    and `git clean -f`.
 2. Remember the answer; Step 4 writes it to `.claude/settings.json`.
@@ -119,18 +117,18 @@ Claude Code reads `AGENTS.md` only while the project has no `CLAUDE.md`, so a
    - **`CLAUDE.md` exists:** read it and use your judgment to check whether it
      already has an "Invent Project Guidelines" section (substance, not
      exact title).
-     - If present, marked v0.8, stating the same repo type, and mentioning
+     - If present, marked v0.7, stating the same repo type, and mentioning
        pre-commit only if Step 5 applies to this repo: tell the user it's
        already set up, move to Step 4.
-     - If present but older (v0.7, v0.6, v0.5, v0.4, v0.3, v0.2, v0.1 or unversioned), stating the
+     - If present but older (v0.6, v0.5, v0.4, v0.3, v0.2, v0.1 or unversioned), stating the
        other repo type, or differing on pre-commit: show the diff to the
        block below and ask whether to replace the old section with it.
      - If missing: show the block below and ask whether to append it.
 
-Invent baseline block (v0.8). It is written for **prod**; for a **demo** repo,
+Invent baseline block (v0.7). It is written for **prod**; for a **demo** repo,
 swap in the demo lines listed after it.
 
-    ## Invent Project Guidelines (v0.8)
+    ## Invent Project Guidelines (v0.7)
 
     Repo type: **prod** (`INVENT_REPO_TYPE` in `.claude/settings.json`; don't
     change it yourself).
@@ -161,8 +159,7 @@ swap in the demo lines listed after it.
     ### Committing
 
     - Never commit on your own. Propose the commit (files + message) and wait
-      for the user's OK. `git-safety` then asks for a confirmation once more
-      when you run `git commit`; that is intended, so tell the user it comes.
+      for the user's OK.
     - Never `git add .` or `git add -A`: the working tree may hold local
       working files that must not be committed.
     - Staging, in this order of preference:
@@ -237,21 +234,18 @@ swap in the demo lines listed after it.
            Only for a tricky step: a short code sketch (signature, key
            logic, edge case). It is guidance; check it against the code.
 
-    ### Invent tooling (v0.8)
+    ### Invent tooling (v0.7)
 
     - **Pre-tool-use hooks (active):** `protect-secrets` (Read/Edit/Write/Grep/
       Bash/PowerShell), `block-dangerous-commands` and `git-safety`
       (Bash/PowerShell). `git-safety` blocks commits, merges, rebases,
-      resets and pushes on main/master — work on a feature branch. It also
-      blocks `git add .`/`-A` and asks the user before every commit (see
-      "Committing").
+      resets and pushes on main/master — work on a feature branch.
     - **Session-start hook (active):** `ponytail-activate` loads the
       `ponytail` ruleset into every session.
     - **Deny rules:** `.claude/settings.json` blocks reading and editing
       secret files (`.env`, keys, credentials). Don't work around them.
     - **Pre-commit hooks:** Python complexity (radon/xenon), lint and format
-      (ruff), optional type check (ty); JS/TS lint and complexity (ESLint),
-      format (Prettier), optional type check (tsc) — blocking in this prod repo; see
+      (ruff), optional type check (ty) — blocking in this prod repo; see
       `.pre-commit-config.yaml`. Never bypass them with `--no-verify`: if a
       hook blocks, fix the reported issue once; if it still fails, stop and
       ask the user.
@@ -278,18 +272,13 @@ Demo variant: replace these parts of the block, keep everything else.
 
 - Append to "Review it": `If you worked on main, tell the agent which plan
   file and which commits to review.`
-- In the hooks bullet, the `git-safety` sentences (from "`git-safety` blocks" to "(see
-  "Committing")") →
+- In the hooks bullet, the `git-safety` sentence →
 
       `git-safety` is relaxed in this demo repo: it only blocks deleting or
       force-pushing main/master and `gh repo delete` / `gh release delete`.
 
 - In the pre-commit bullet, `blocking in this prod repo` → `advisory in this
   demo repo`.
-
-Language variant: in the pre-commit bullet, keep only the languages Step 5
-sets up hooks for (Python, JS/TS or both), and drop an optional type checker
-the user declined.
 
 No pre-commit variant: when Step 5 does not apply to this repo (see the check
 at its top), the repo gets no pre-commit hooks, so the block must not
@@ -314,18 +303,7 @@ to everyone on the team.
    - If it exists: read it. Show which of the rules below are missing from
      `permissions.deny`, and whether `env.INVENT_REPO_TYPE` is missing or
      differs, and ask whether to update them. Keep every existing key, env
-     variable and rule; never remove or reorder the user's rules, except
-     the git rules below if the user agrees.
-   - Git rules: list every `permissions.deny` rule on `git` or `gh` (e.g.
-     `Bash(git push * main)`, `PowerShell(git push *)`), here, in
-     `./.claude/settings.local.json` and in `~/.claude/settings.json`. Deny
-     rules from all three add up and apply in demo and prod alike, and no
-     hook can lift them, so they override the repo type: in a demo repo a
-     denied push to main stays blocked. Branch protection is `git-safety`'s
-     job, which follows the repo type, and `block-dangerous-commands` blocks
-     force-pushes. For the rules in this file, ask via AskUserQuestion
-     (multiSelect) which to remove. For the other two files, only name the
-     rules and say the user can remove them there; don't edit those files.
+     variable and rule; never remove or reorder the user's rules.
 2. Remind the user to commit `.claude/settings.json`. The repo type applies
    from the next tool call once the file is saved. Someone who needs a
    different value for themselves can set it in `.claude/settings.local.json`.
@@ -378,107 +356,85 @@ exception out of the rules listed before it, so keep the order):
           "Read(secrets.yml)",
           "Read(secrets.toml)",
           "Read(~/.ssh/**)",
-          "Read(~/.aws/**)"
+          "Read(~/.aws/**)",
+          "Bash(git add .)",
+          "Bash(git add -A*)",
+          "Bash(git add --all*)",
+          "PowerShell(git add .)",
+          "PowerShell(git add -A*)",
+          "PowerShell(git add --all*)"
+        ],
+        "ask": [
+          "Bash(git commit *)",
+          "PowerShell(git commit *)"
         ]
       }
     }
 
+The six `git add` rules and the `ask` list enforce the "Committing" section
+of the CLAUDE.md block. They are **prod only**: for a demo repo, leave them
+out. When updating an existing file, treat them like the other rules (add
+the missing ones to `permissions.deny` and `permissions.ask`).
+
 ## Step 5 — Pre-commit hooks (project)
 
-Only applies to a git repository with Python or JS/TS code:
-
-- **Python:** a `pyproject.toml`, a `uv.lock`/`poetry.lock`, or `.py` files
-  anywhere in the repo (Glob `**/*.py`, skipping `.venv`, `node_modules` and
-  `.git`).
-- **JS/TS:** a `package.json` at the repo root; TypeScript if a
-  `tsconfig.json` is there too.
-
-A repo with both gets both sets of hooks in one `.pre-commit-config.yaml`; do
-the steps below for each. Neither: say so and skip to Step 6. If
-`git config core.hooksPath` is set (e.g. by husky), `pre-commit install`
-refuses to run: tell the user and skip to Step 6.
+Only applies to Python projects in a git repository (a `pyproject.toml`, a
+`uv.lock`/`poetry.lock`, or `.py` files anywhere in the repo: Glob `**/*.py`,
+skipping `.venv`, `node_modules` and `.git`). Otherwise say so and skip to
+Step 6.
 
 1. Detect the environment manager:
-   - Python: `uv.lock` present → `uv`; `poetry.lock` present (or
-     `[tool.poetry]` in `pyproject.toml`) → `poetry`; otherwise → a plain
-     venv/pip project.
-   - JS/TS: `pnpm-lock.yaml` → `pnpm`; `yarn.lock` → `yarn`; `bun.lock` or
-     `bun.lockb` → `bun`; otherwise → `npm`.
+   - `uv.lock` present → `uv`.
+   - `poetry.lock` present (or `[tool.poetry]` in `pyproject.toml`) → `poetry`.
+   - Otherwise → treat as a plain venv/pip project.
 2. Use the repo type from Step 2 (don't ask again) and tell the user what it
    means here:
    - **Demo** — checks are *advisory*: findings are listed on every commit,
-     but the commit goes through. The one exception is the formatter
-     (`ruff format`, `prettier`): when it reformats a file, the commit stops
-     once — `git add` and commit again.
-   - **Prod** — checks are *blocking*. Python: a commit fails on any function
-     of rank D or worse (complexity ≥ 21; rank C, 11–20, is still listed as a
+     but the commit goes through.
+   - **Prod** — checks are *blocking*: a commit fails on any function of
+     rank D or worse (complexity ≥ 21; rank C, 11–20, is still listed as a
      warning), on any `ruff` lint finding, and — if chosen below — on any
-     `ty` type error. JS/TS: it fails on any ESLint error, on any function
-     with complexity ≥ 21, and — if chosen below — on any `tsc` type error.
-3. **Python:** ask via AskUserQuestion whether to add **ty**, a fast type checker
+     `ty` type error.
+
+   Formatting isn't part of `.pre-commit-config.yaml` in either mode: the
+   kit's own `ruff-format` hook (installed with the rest of the kit, see
+   SETUP.md / README.md) runs `ruff format` on a `.py`/`.pyi` file right
+   after Claude writes to it, so files are already formatted by commit time.
+   `ruff-check` (lint) still runs from pre-commit and can still block.
+3. Ask via AskUserQuestion whether to add **ty**, a fast type checker
    (recommended for new code). It runs from the project's venv so it can see
    the project's dependencies, so it must be a dev dependency. Check whether
    it's installed (`uv run ty --version`, `poetry run ty --version`, or
    `ty --version` in the active venv); if not, show the exact command
    (`uv add --dev ty`, `poetry add --group dev ty`, or `pip install ty`) and
    ask for confirmation before running it. If they decline, leave it out.
-4. **JS/TS:** the hooks run the project's own ESLint, Prettier and `tsc`
-   from `node_modules`, so they must be dev dependencies.
-   - Check `npx --no-install eslint --version` (9 or newer),
-     `npx --no-install prettier --version` and, for TypeScript,
-     `npx --no-install tsc --version`. If one is missing or ESLint is older,
-     show the exact command (npm: `npm install --save-dev eslint @eslint/js
-     globals prettier`, plus `typescript typescript-eslint` for TypeScript;
-     `pnpm add -D`, `yarn add -D` or `bun add -d` with the same packages)
-     and ask for confirmation before running it. If they decline, leave out
-     the hooks whose tool is missing.
-   - **TypeScript:** ask via AskUserQuestion whether to add **tsc** type
-     checking (recommended). It checks the whole project from
-     `tsconfig.json` on every commit that touches a TS file, so it can be
-     slow in a big repo. If they decline, leave it out.
-   - **ESLint config:** an `eslint.config.*` exists → keep it. Only a legacy
-     `.eslintrc*` → ESLint 9 ignores it: tell the user that
-     `npx @eslint/migrate-config <file>` converts it, don't convert it
-     yourself, and leave the ESLint hook out until it is converted. None →
-     show the config below and ask whether to create `eslint.config.mjs`.
-   - **Prettier config:** none (`.prettierrc*`, `prettier.config.*` or a
-     `"prettier"` key in `package.json`) → ask whether to create
-     `.prettierrc.json` containing `{}`, so editors format like the hook.
-   - Tell the user that everyone who commits needs the dependencies
-     installed first (`npm install` or the equivalent); without
-     `node_modules` the JS/TS hooks fail with `npx canceled due to missing
-     packages`.
-5. Check whether `.pre-commit-config.yaml` exists.
-   - If missing: show the blocks for the chosen mode and languages (below),
-     prefixed with a top-level `repos:` line, and ask to create the file.
+4. Check whether `.pre-commit-config.yaml` exists.
+   - If missing: show the blocks for the chosen mode (below), prefixed with a
+     top-level `repos:` line, and ask to create the file.
    - If it exists: read it. If it already has a `radon-cc`, `xenon`, `ruff`,
-     `ruff-check`, `ruff-format`, `ty`, `pylint`, `eslint`, `prettier` or
-     `tsc` hook (also from `mirrors-eslint` / `mirrors-prettier`), tell the
-     user and ask whether to replace it. Otherwise show the blocks and ask
-     whether to append them under the existing `repos:` list.
-6. Check whether `pre-commit` is available (`pre-commit --version`, or
+     `ruff-check`, `ruff-format`, `ty` or `pylint` hook, tell the user and
+     ask whether to replace it. Otherwise show the blocks and ask whether to
+     append them under the existing `repos:` list.
+5. Check whether `pre-commit` is available (`pre-commit --version`, or
    `uv run pre-commit --version` / `poetry run pre-commit --version`). If not,
    **never install it silently** — show the exact command for their
    environment (e.g. `uv add --dev pre-commit`, `poetry add --group dev
-   pre-commit`, or `pip install pre-commit`; in a repo without Python,
-   `uv tool install pre-commit` or `pipx install pre-commit`) and ask for
-   confirmation first.
-7. Run `pre-commit install` so the hooks fire on `git commit`. Then show the
+   pre-commit`, or `pip install pre-commit`) and ask for confirmation first.
+6. Run `pre-commit install` so the hooks fire on `git commit`. Then show the
    current state of the codebase **without changing any file**:
-   - `SKIP=ruff-format,prettier pre-commit run --all-files` (PowerShell:
-     `$env:SKIP='ruff-format,prettier'; pre-commit run --all-files`) for
-     lint, complexity and types;
-   - Python: `ruff format --check .` for formatting (`uvx ruff format
-     --check .` if ruff isn't installed; skip it if neither works);
-   - JS/TS: `npx --no-install prettier --check .` for formatting.
+   - `pre-commit run --all-files` for lint, complexity and types;
+   - `ruff format --check .` for formatting (`uvx ruff format --check .` if
+     ruff isn't installed; skip it if neither works). This isn't a
+     pre-commit hook (see above) — it's just a read of whether the existing
+     codebase is already formatted.
    Use the `uv run` / `poetry run` prefix from step 1 where needed. In prod
    mode on an existing codebase this may already fail — tell the user what
    fails and that they can either fix it or loosen the threshold (see the
    comments in the blocks); don't fix it yourself here. If files would be
    reformatted, say how many and ask whether to format them now as a
-   separate commit (`pre-commit run ruff-format --all-files`,
-   `pre-commit run prettier --all-files`) or leave it: each file then gets
-   formatted the first time a commit touches it.
+   separate commit (`ruff format .`, or `uvx ruff format .`) or leave it:
+   each file then gets formatted the next time Claude edits it (via the
+   `ruff-format` hook) or the next time someone runs `ruff format` by hand.
 
 If a `uv` or `uvx` command fails with `invalid peer certificate` or
 `UnknownIssuer`, a company proxy re-signs HTTPS: tell the user to set
@@ -504,9 +460,6 @@ Demo block (advisory):
           - id: ruff-check
             args: [--exit-zero]
             verbose: true
-          # Formats Python files. Stops the commit once when it changes a file.
-          - id: ruff-format
-            types_or: [python, pyi]
       - repo: local
         hooks:
           # Advisory only: lists functions of rank C or worse (complexity >= 11),
@@ -530,9 +483,6 @@ Prod block (blocking):
           # more under [tool.ruff.lint] in pyproject.toml. Leave C901 off,
           # radon/xenon cover complexity.
           - id: ruff-check
-          # Formats Python files. Stops the commit once when it changes a file.
-          - id: ruff-format
-            types_or: [python, pyi]
       - repo: local
         hooks:
           # Advisory: lists functions of rank C or worse (complexity >= 11).
@@ -568,84 +518,10 @@ Optional ty block (append to the `repo: local` hooks if the user chose it):
             types: [python]
             exclude: ^(tests/|scripts/)
 
-The JS/TS hooks are `language: system`: they run the project's own ESLint,
-Prettier and tsc via `npx --no-install`, so they use the project's config and
-plugins and never download anything during a commit. Demo hooks wrap the
-command in `sh -c '… || true'` so they never block; on Windows, Git for
-Windows provides `sh` to the hooks. Write the ESLint rule without spaces
-(`complexity:[warn,10]`): with a space after the colon the YAML doesn't parse.
-
-JS/TS demo block (advisory):
-
-      - repo: local
-        hooks:
-          # Advisory: lists lint findings and functions with complexity >= 11,
-          # never blocks. Rules: eslint.config.*; the limit is set here.
-          - id: eslint
-            name: eslint (lint + complexity, advisory)
-            entry: sh -c 'npx --no-install eslint --no-warn-ignored --rule "complexity:[warn,10]" "$@" || true' --
-            language: system
-            types_or: [javascript, jsx, ts, tsx]
-            verbose: true
-          # Formats JS/TS files. Stops the commit once when it changes a file.
-          - id: prettier
-            name: prettier (format)
-            entry: npx --no-install prettier --write --ignore-unknown
-            language: system
-            types_or: [javascript, jsx, ts, tsx]
-
-JS/TS prod block (blocking):
-
-      - repo: local
-        hooks:
-          # Blocking: fails on any lint error and on any function with
-          # complexity >= 21 (the same gate as xenon). Use complexity:[error,10]
-          # for a stricter gate. Rules: eslint.config.*; the limit is set here.
-          - id: eslint
-            name: eslint (lint + complexity, blocking)
-            entry: npx --no-install eslint --no-warn-ignored --rule "complexity:[error,20]"
-            language: system
-            types_or: [javascript, jsx, ts, tsx]
-          # Formats JS/TS files. Stops the commit once when it changes a file.
-          - id: prettier
-            name: prettier (format)
-            entry: npx --no-install prettier --write --ignore-unknown
-            language: system
-            types_or: [javascript, jsx, ts, tsx]
-
-Optional tsc block (append to the JS/TS `repo: local` hooks if the user chose
-it):
-
-          # Type checks the whole project (tsconfig.json), not only staged files.
-          # Prod: blocks on any type error.
-          # Demo: use  entry: sh -c 'npx --no-install tsc --noEmit || true'  and add verbose: true.
-          - id: tsc
-            name: tsc (type check)
-            entry: npx --no-install tsc --noEmit
-            language: system
-            types_or: [ts, tsx]
-            pass_filenames: false
-
-ESLint config (`eslint.config.mjs`, only if the project has none). For plain
-JS, drop the `typescript-eslint` import and its line:
-
-    import { defineConfig, globalIgnores } from 'eslint/config';
-    import js from '@eslint/js';
-    import tseslint from 'typescript-eslint';
-    import globals from 'globals';
-
-    export default defineConfig(
-      globalIgnores(['dist/', 'build/', 'coverage/']),
-      js.configs.recommended,
-      tseslint.configs.recommended,
-      { languageOptions: { globals: { ...globals.browser, ...globals.node } } },
-    );
-
 To switch a repo from demo to prod later, rerun `/agentic-kit-setup`: Step 2
 changes the repo type, Steps 3 to 5 update the CLAUDE.md block, the settings
 and these hooks. By hand: change `INVENT_REPO_TYPE`, add `xenon`, drop the
-`--exit-zero` flags and the `sh -c '… || true'` wrappers, and change the
-ESLint rule to `complexity:[error,20]`.
+`--exit-zero` flags.
 
 ## Step 6 — Statusline and notification (personal, optional)
 
