@@ -23,7 +23,7 @@
  * fallback 'prod'). Demo repos may commit, merge, rebase, reset and push on
  * main and merge/close PRs and issues; deleting main (local or remote),
  * force-pushing to main and gh repo/release deletion stay blocked. Prod repos
- * also block bulk staging (`git add .`/`-A`) and ask before every commit. Wired by invent-agentic-kit's hooks/hooks.json;
+ * also block bulk staging (`git add .`/`-A`) and `git commit --no-verify`, and ask before every commit. Wired by invent-agentic-kit's hooks/hooks.json;
  * configure via "env" in .claude/settings.json, see the kit's README.
  */
 
@@ -41,7 +41,7 @@ const REPO_TYPE = process.env.INVENT_REPO_TYPE === 'demo' ? 'demo' : 'prod';
 const DEMO_ALLOWED = new Set([
   'commit-on-protected', 'merge-on-protected', 'rebase-on-protected', 'reset-on-protected',
   'push-on-protected', 'push-main', 'push-master', 'gh-pr-merge', 'gh-pr-close', 'gh-issue-close',
-  'add-all', 'commit-ask',
+  'add-all', 'commit-no-verify', 'commit-ask',
 ]);
 
 const PROTECTED_BRANCHES = ['main', 'master'];
@@ -95,6 +95,11 @@ const PATTERNS = [
   // invent patch: prod repos stage by name, so local working files never slip
   // into a commit (`git add .`, `-A`, `--all`, `:/`, `*`); `git add -u` is fine
   { level: 'high', id: 'add-all',                   regex: git(String.raw`(?:add|stage)\b[^;&|]*\s["']?(?:\.|-[a-zA-Z]*A[a-zA-Z]*|--all|:\/|\*)["']?(?=\s|$|[;&|])`), reason: 'Not allowed in this prod repo: `git add .`/`-A` also picks up local working files. Stage files by name (`git add <file>`) or with `git add -u`' },
+  // invent patch: prod repos never skip the pre-commit checks: `--no-verify`, or
+  // `-n` alone or in a cluster of flag letters (`-nm`, `-anm`; not `-uno` or
+  // `-mnew`, where the n is a value). Quoted text is skipped whole, so a commit
+  // message that mentions --no-verify passes.
+  { level: 'high', id: 'commit-no-verify',          regex: git(String.raw`commit\b(?:[^;&|"']|"[^"]*"|'[^']*')*?\s(?:--no-verify|-[aeiopqsvz]*n[a-zA-Z]*)(?=\s|$|[;&|])`), reason: 'Not allowed in this prod repo: `--no-verify`/`-n` skips the pre-commit checks. Fix what they report; if a check still fails, stop and ask the user' },
   // invent patch: prod repos ask before every commit, last so a block wins
   { level: 'high', id: 'commit-ask',                regex: git(String.raw`commit\b`),                         reason: 'Claude may not commit on its own in this prod repo, so every commit needs your confirmation here. Confirm only if it is the commit you approved (files and message)', ask: true },
 ];

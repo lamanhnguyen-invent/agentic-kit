@@ -45,8 +45,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/ruff-format/ruff-format.js\"",
-            "timeout": 10
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/format/format.js\"",
+            "timeout": 30
           }
         ]
       }

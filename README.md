@@ -29,7 +29,7 @@ a file silently, except in step 7:
 3. **Project CLAUDE.md** — adds the Invent project guidelines: the ticket
    workflow below and a summary of the hooks in use, worded for the repo
    type. Updates an older version of the block if it finds one (the block has
-   its own version, v0.7, which changes only when its text does, so a kit
+   its own version, v0.9, which changes only when its text does, so a kit
    update alone never asks you to replace it). In a repo
    without a `CLAUDE.md` it starts Claude Code's built-in `/init` first; next
    to an `AGENTS.md` it imports it with `@AGENTS.md` instead (Claude Code
@@ -60,10 +60,11 @@ one puts back every file that existed before the setup, as it was then.
 Files the setup created, and changes to `.gitignore` and `~/.claude`, stay
 in place. Step 7 never adds back what you declined earlier in the setup.
 
-Step 5 only runs for Python projects in a git repo (`.py` files anywhere in
-the repo count). The pre-commit checks cover Python files only; there are no
-checks for JS/TS or other languages (Prettier, ESLint, …) yet. In other repos
-the guidelines block from step 3 leaves the pre-commit part out.
+Step 5 only runs for Python or JS/TS projects in a git repo (`.py` files
+anywhere in the repo, or a `package.json` at its root). The pre-commit checks
+cover Python, JS and TS files; there are no checks for other languages yet.
+In other repos the guidelines block from step 3 leaves the pre-commit part
+out.
 
 **Statusline and notification.** Step 6 copies `extras/statusline.js` and
 `extras/notify.js` to `~/.claude/invent-kit/` and points your personal
@@ -97,12 +98,14 @@ installed. They run while Claude works, on Claude's own tool calls:
 | `block-dangerous-commands` | before Bash/PowerShell | Blocks destructive commands (`rm -rf ~`, `Remove-Item -Recurse ~`, force-push to main, `git reset --hard`, …) |
 | `git-safety` | before Bash/PowerShell | Prod: no commits, merges, rebases, resets or pushes on main/master; no `gh pr merge`, `gh repo delete`, … Demo: relaxed (see below) |
 | `ponytail-activate` | session start | Loads the `ponytail` ruleset into every session (off: `PONYTAIL_MODE=off`) |
-| `ruff-format` | after Edit/Write | Runs `ruff format` on a `.py`/`.pyi` file right after Claude writes it (off: `RUFF_FORMAT_MODE=off`) |
+| `format` | after Edit/Write | Formats the file Claude just wrote: `ruff format` for `.py`/`.pyi`, the project's Prettier for JS/TS (off: `FORMAT_MODE=off`) |
 
 The three pre-tool-use hooks log to `~/.claude/hooks-logs/`. They are regex
-guards — a seatbelt against slips, not a sandbox. `ruff-format` logs there
-too; it fails open (missing `ruff`, a non-Python file, or a formatting error
-never blocks the tool call or surfaces to Claude).
+guards — a seatbelt against slips, not a sandbox. `format` logs there too;
+it fails open (a missing formatter, another file type, or a formatting
+error never blocks the tool call or surfaces to Claude). It runs `ruff`, or
+`uvx ruff` if ruff isn't on the PATH, and Prettier only from the project's
+`node_modules`; it never installs anything.
 
 **Demo vs prod.** `git-safety` reads the repo type from `INVENT_REPO_TYPE`,
 which setup writes into the project's `.claude/settings.json`. Unset or any
@@ -113,7 +116,9 @@ other value means prod.
 | commit, merge, rebase, reset, push while on main/master | blocked | allowed |
 | `git push origin main` from another branch | blocked | allowed |
 | `gh pr merge`, `gh pr close`, `gh issue close` | blocked | allowed |
-| deleting main/master, locally or on the remote (`git push origin --delete main`, `:main`) | blocked | blocked |
+| bulk staging: `git add .`, `-A`, `--all`, `:/`, `*` (by name and `git add -u` are fine) | blocked | allowed |
+| `git commit --no-verify` / `-n` (skips the pre-commit checks) | blocked | allowed |
+| `git commit` on a feature branch | asks you first | allowed || deleting main/master, locally or on the remote (`git push origin --delete main`, `:main`) | blocked | blocked |
 | force-pushing main/master (`--force`/`-f`/`--force-with-lease`, `+main`, or any force-push while on main) | blocked | blocked |
 | `gh repo delete`, `gh release delete` | blocked | blocked |
 | `git reset --hard`, `git clean -f` on any branch (`block-dangerous-commands`) | blocked | blocked |
@@ -138,7 +143,7 @@ so a saved change applies to the next tool call.
 | `HOOK_SAFETY_LEVEL` | `critical` / `high` (default) / `strict` | How many rules the three safety hooks apply. `critical` turns `git-safety` off entirely |
 | `HOOK_ASK_CRITICAL`, `HOOK_ASK_HIGH`, `HOOK_ASK_STRICT` | `true` | Ask instead of block for that level (protect-secrets, block-dangerous-commands) |
 | `PONYTAIL_MODE` | `off` | Stops loading ponytail at session start. The skill stays installed, so Claude may still invoke it on its own |
-| `RUFF_FORMAT_MODE` | `off` | Stops `ruff-format` from running after Edit/Write |
+| `FORMAT_MODE` | `off` | Stops `format` from running after Edit/Write |
 
 `ponytail-activate` runs on startup, `/clear` and compaction, not on resume,
 where the transcript already has it. It leaves out two parts of the upstream
@@ -206,35 +211,55 @@ stop shell commands (a test let `head -1 .env` through); the
 opens files itself (`python -c ...`) is covered by neither, which needs
 Claude Code's sandbox.
 
+Deny rules and hooks both have to let a call through, and no hook can lift a
+deny rule. A deny rule on `git` or `gh` (`Bash(git push * main)`) therefore
+holds in demo repos too and overrides the repo type. So the kit keeps git
+rules in `git-safety` only: setup step 4 lists such deny rules (project,
+`settings.local.json`, `~/.claude/settings.json`) and offers to remove the
+project's. `/repo-setup` never turns a git instruction into a deny rule: it
+deletes a `CLAUDE.md` line the hooks already cover ("never push to main") and
+leaves the others in place.
+
 **Pre-commit hooks** are written into the project's `.pre-commit-config.yaml`
 by setup step 5. They run on every `git commit`, whoever makes the commit —
-Claude or a person. They check **Python files only**: a commit without `.py`
-files passes them untouched, and other languages (JS/TS, …) aren't checked yet.
+Claude or a person. They check **Python and JS/TS files**: a commit without
+such files passes them untouched, and other languages aren't checked yet.
+
+Python:
 
 | Hook | Demo repo | Prod repo | Runs from |
 |---|---|---|---|
 | `radon-cc` — cyclomatic complexity | Lists functions with complexity ≥ 11 | Same | pre-commit's own environment |
 | `xenon` — complexity gate | — | Blocks functions with complexity ≥ 21 | pre-commit's own environment |
 | `ruff-check` — lint | Lists findings | Blocks on findings | pre-commit's own environment |
+| `ruff-format` — formatting | Formats | Formats | pre-commit's own environment |
 | `ty` — type checker *(optional)* | Lists type errors | Blocks on type errors | project venv (dev dependency), via `uv run --no-sync` so commits never rewrite `uv.lock` |
 
-Formatting isn't one of them: the `ruff-format` **hook** (above) formats a
-`.py`/`.pyi` file right after Claude writes it, so files are already
-formatted by the time they're committed. A file edited outside Claude Code
-(by a person, or with the hook off) isn't auto-formatted at commit time
-either — `ruff-check` still lints it, but won't reformat it; run `ruff
-format` yourself first.
+JS/TS:
+
+| Hook | Demo repo | Prod repo | Runs from |
+|---|---|---|---|
+| `eslint` — lint and complexity | Lists findings and functions with complexity ≥ 11 | Blocks on errors and functions with complexity ≥ 21 | `node_modules` (dev dependency), via `npx --no-install` |
+| `prettier` — formatting | Formats | Formats | `node_modules` (dev dependency) |
+| `tsc` — type checker *(optional, TypeScript)* | Lists type errors | Blocks on type errors | `node_modules` (dev dependency) |
 
 Demo repos get advisory checks: findings are shown, but the commit goes
-through, so a one-off demo isn't slowed down. Prod repos get blocking
-checks. The thresholds and how to change them are explained in comments in
-the generated `.pre-commit-config.yaml`. `ty` is only added if you choose it
+through, so a one-off demo isn't slowed down. The one exception is the
+formatter (`ruff-format`, `prettier`): when it reformats a file, the commit
+stops once — add the file and commit again. For files Claude writes, that
+rarely happens: the `format` hook (above) has formatted them already, and
+the pre-commit formatter catches the rest (files edited by a person, or with
+the hook off). Prod repos get blocking checks.
+The thresholds and how to change them are explained in comments in the
+generated `.pre-commit-config.yaml`. `ty` is only added if you choose it
 during setup, because it must be installed in the project's venv to see its
-dependencies.
+dependencies. The JS/TS hooks use the project's own ESLint and Prettier
+config; setup offers a minimal `eslint.config.mjs` if there is none. Everyone
+who commits needs `npm install` (or the equivalent) done first.
 
-Each tool has one job: radon/xenon measure complexity, ruff lints, ty checks
-types. ruff's own complexity rule (C901) stays off so complexity isn't
-checked twice.
+Each tool has one job: radon/xenon measure complexity, ruff lints and
+formats, ty checks types. ruff's own complexity rule (C901) stays off so
+complexity isn't checked twice.
 
 ### 3. A workflow for bigger tickets — suggested, not required
 
@@ -354,10 +379,15 @@ To see or disable the hooks: `/hooks`, or turn the plugin off in `/plugin`.
 
 - **Node.js ≥ 18** — all Claude Code hooks are Node scripts. Claude Code
   itself runs without Node, but then every guard of the kit silently stays
-  off; setup checks for Node first.
+  off; setup checks for Node first. Install it from the pre-approved
+  software in the Company Portal.
 - **git** — for `git-safety` and the pre-commit hooks.
 - **Python projects:** a project venv managed by `uv`, `poetry` or pip, plus
   `pre-commit`. Setup offers to install `pre-commit` and `ty` if they're
+  missing.
+- **JS/TS projects:** `pre-commit` (a Python tool, e.g. via
+  `uv tool install pre-commit`) and ESLint 9+, Prettier and, for tsc,
+  TypeScript as dev dependencies. Setup offers to install them if they're
   missing.
 - **Behind a company proxy:** if `uv` fails with `invalid peer certificate`,
   set `UV_SYSTEM_CERTS=1` so it trusts the system certificate store.

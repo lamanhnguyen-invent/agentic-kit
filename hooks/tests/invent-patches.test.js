@@ -211,6 +211,19 @@ describe('git-safety: prod stages by name and asks before a commit', () => {
   });
 });
 
+describe('git-safety: prod never skips the pre-commit checks', () => {
+  const check = (c, repoType = 'prod') => gs.checkCommand(c, 'feat', 'high', { repoType });
+  for (const c of ['git commit --no-verify -m x', 'git commit -n -m x', 'git commit -nm x', 'git commit -anm x', 'git commit -m x --no-verify',
+    'git commit -m "a; b" -n', 'git -C . commit --no-verify -m x', 'GIT COMMIT -n -m x', 'git add a.py && git commit --no-verify -m x']) {
+    it(`prod blocks ${c}`, () => assert.strictEqual(check(c).pattern?.id, 'commit-no-verify'));
+  }
+  for (const c of ['git commit -m "skip --no-verify next time"', "git commit -m 'never use -n'", 'git commit -uno -m x', 'git commit -mnew',
+    'git commit --amend -m x', 'git log -n 3', 'git push --no-verify']) {
+    it(`prod does not block ${c}`, () => assert.notStrictEqual(check(c).pattern?.id, 'commit-no-verify'));
+  }
+  it('demo allows it', () => assert.deepStrictEqual([check('git commit --no-verify -m x', 'demo').blocked, !!check('git commit --no-verify -m x', 'demo').ask], [false, false]));
+});
+
 describe('git-safety: deleting or force-pushing the remote main stays blocked in demo', () => {
   const blocked = (c, b, repoType) => gs.checkCommand(c, b, 'high', { repoType }).blocked;
   for (const repoType of ['prod', 'demo']) {

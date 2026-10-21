@@ -84,7 +84,8 @@ finding wherever the baseline says the content belongs somewhere else:
 The kit's hooks cover these git and `gh` rules. In prod repos `git-safety`
 blocks committing, merging, rebasing, resetting and pushing on main/master,
 pushing to main/master, `gh pr merge`, `gh pr close` and
-`gh issue close`, and bulk staging (`git add .`, `-A`, `--all`), and asks
+`gh issue close`, bulk staging (`git add .`, `-A`, `--all`) and
+`git commit --no-verify`/`-n`, and asks
 before every commit; demo repos allow these on purpose, so a "never" line about
 them contradicts the repo type there. In both repo types the hooks block
 deleting main/master, force-pushing, `gh repo delete`, `gh release delete`,
